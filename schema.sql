@@ -1,5 +1,5 @@
 -- Skema Database Relasional (schema.sql) untuk PostgreSQL
--- (Revisi: Penambahan Fitur Cuaca, Harga, dan RESTRICT Constraint)
+-- Revisi Final Sprint 1 (Sesuai SRS v1.1: CV Pandawa Kencana Multifarm)
 
 DROP TABLE IF EXISTS Batch_Produksi CASCADE;
 DROP TABLE IF EXISTS Hasil_Prediksi CASCADE;
@@ -20,18 +20,19 @@ CREATE TABLE Komoditas (
     nama_komoditas VARCHAR(100) NOT NULL,
     satuan VARCHAR(20) NOT NULL,
     harga_satuan_estimasi DECIMAL(10,2),
-    masa_simpan_hari INTEGER -- Fitur baru untuk alert penurunan mutu mikroba
+    masa_simpan_hari INTEGER -- Untuk fitur alert EWS viabilitas mikroba (60-240 hari)
 );
 
 CREATE TABLE Permintaan_Poktan (
     id_permintaan SERIAL PRIMARY KEY,
-    id_poktan INTEGER NOT NULL REFERENCES Poktan(id_poktan) ON DELETE RESTRICT,
+    id_poktan INTEGER REFERENCES Poktan(id_poktan) ON DELETE RESTRICT, -- Dibuat bisa NULL untuk menampung transaksi Shopee yang tidak punya Poktan
     id_komoditas INTEGER NOT NULL REFERENCES Komoditas(id_komoditas) ON DELETE RESTRICT,
+    kanal_distribusi VARCHAR(50) DEFAULT 'Offline Poktan', -- Fitur Omnichannel (Offline Poktan / Online Shopee)
     tanggal_permintaan DATE NOT NULL,
     volume_permintaan DECIMAL(10,2) NOT NULL,
-    harga_satuan_transaksi DECIMAL(10,2) NOT NULL, -- Revisi: Harga fluktuatif
-    fase_musim VARCHAR(50) NOT NULL,               -- Revisi: Faktor Musim
-    curah_hujan_mm DECIMAL(10,2) NOT NULL,         -- Revisi: Faktor Cuaca
+    harga_satuan_transaksi DECIMAL(10,2) NOT NULL, 
+    fase_musim VARCHAR(50) NOT NULL,               
+    curah_hujan_mm DECIMAL(10,2) NOT NULL,         
     status_data VARCHAR(20) DEFAULT 'Cleaned'
 );
 
@@ -41,7 +42,7 @@ CREATE TABLE Stok_Gudang (
     tanggal_catat DATE NOT NULL,
     volume_stok_aktual DECIMAL(10,2) NOT NULL,
     threshold_minimum DECIMAL(10,2) NOT NULL,
-    tgl_kadaluarsa DATE -- Sinkron dengan masa_simpan_hari di komoditas
+    tgl_kadaluarsa DATE 
 );
 
 CREATE TABLE Hasil_Prediksi (
@@ -67,3 +68,12 @@ CREATE TABLE Pengguna (
     username VARCHAR(50) NOT NULL UNIQUE,
     peran VARCHAR(50) NOT NULL
 );
+
+-- Seed Data / Master Produk CV Pandawa Kencana Multifarm
+INSERT INTO Komoditas (nama_komoditas, satuan, harga_satuan_estimasi, masa_simpan_hari) VALUES
+('GB Propunic', 'Liter', 30000, 90),
+('GB Profeed', 'Liter', 30000, 180),
+('GB Proquatic', 'Liter', 30000, 180),
+('Pendawa Subur POC', 'Liter', 35000, 120),
+('Agen Hayati', 'Saset/Kg', 25000, 60),
+('Compossap', 'Zak', 25000, 240);
