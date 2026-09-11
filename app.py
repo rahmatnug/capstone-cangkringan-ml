@@ -475,7 +475,14 @@ def load_data():
     df["tanggal_permintaan"] = pd.to_datetime(df["tanggal_permintaan"])
 
     # Mapping komoditas sesuai schema.sql
-    komoditas_map = {1: "Beras", 2: "Jagung", 3: "Kedelai"}
+    komoditas_map = {
+        1: "GB Propunic", 
+        2: "GB Profeed", 
+        3: "GB Proquatic",
+        4: "Pendawa Subur POC",
+        5: "Compossap",
+        6: "Agen Hayati [Trichogem / Methagem]"
+    }
     df["nama_komoditas"] = (
         df["id_komoditas"].map(komoditas_map).fillna("Lainnya")
         if "id_komoditas" in df.columns
@@ -489,8 +496,43 @@ df = load_data()
 # CHART HELPERS (Neo-Brutalism palette)
 # ============================================================
 NB_MUSIM   = {"Rendeng": "#FFD600", "Gadu": "#7BF1A8", "Bera": "#88D4FF"}
-NB_KOMOD   = {"Beras": "#FFD600", "Jagung": "#7BF1A8", "Kedelai": "#FF6B9D"}
+NB_KOMOD   = {
+    "GB Propunic": "#FFD600", 
+    "GB Profeed": "#7BF1A8", 
+    "GB Proquatic": "#FF6B9D",
+    "Pendawa Subur POC": "#88D4FF",
+    "Compossap": "#C4B5FD",
+    "Agen Hayati [Trichogem / Methagem]": "#FFA07A"
+}
 NB_PALETTE = ["#FFD600", "#7BF1A8", "#FF6B9D", "#88D4FF", "#C4B5FD", "#FFA07A"]
+
+KOMODITAS_ICONS = {
+    "GB Propunic": "💧", 
+    "GB Profeed": "🐄", 
+    "GB Proquatic": "🐟",
+    "Pendawa Subur POC": "🌿",
+    "Compossap": "🪨",
+    "Agen Hayati [Trichogem / Methagem]": "🛡️"
+}
+
+UNIT_PRODUK = {
+    "GB Propunic": "Liter",
+    "GB Profeed": "Liter",
+    "GB Proquatic": "Liter",
+    "Pendawa Subur POC": "Liter",
+    "Compossap": "Zak",
+    "Agen Hayati [Trichogem / Methagem]": "Saset/Kg",
+}
+
+STOK_MOCK = {
+    "GB Propunic":  {"stok": 150.0, "threshold": 100.0, "masa_simpan": 180, "sisa_hari": 120},
+    "GB Profeed": {"stok": 80.0,  "threshold": 50.0,  "masa_simpan": 120, "sisa_hari": 45},
+    "GB Proquatic":{"stok": 20.0,  "threshold": 30.0,  "masa_simpan": 90,  "sisa_hari": 15},
+    "Pendawa Subur POC":{"stok": 50.0,  "threshold": 40.0,  "masa_simpan": 90,  "sisa_hari": 30},
+    "Compossap":{"stok": 60.0,  "threshold": 40.0,  "masa_simpan": 90,  "sisa_hari": 30},
+    "Agen Hayati [Trichogem / Methagem]":{"stok": 30.0,  "threshold": 20.0,  "masa_simpan": 90,  "sisa_hari": 30},
+}
+STOK_DEFAULT = {"stok": 50.0, "threshold": 40.0, "masa_simpan": 90, "sisa_hari": 30}
 
 def nb_layout(fig, title="", x_title="", y_title=""):
     """Terapkan Neo-Brutalism layout ke figure Plotly."""
@@ -549,7 +591,7 @@ filtered_df        = pd.DataFrame()
 if not df.empty:
     # Komoditas
     st.sidebar.markdown("### 🌾 Komoditas")
-    komoditas_list = sorted(df["nama_komoditas"].unique().tolist())
+    komoditas_list = list(KOMODITAS_ICONS.keys())
     selected_komoditas = st.sidebar.multiselect(
         "Pilih Komoditas", komoditas_list, default=komoditas_list, label_visibility="collapsed"
     )
@@ -625,10 +667,12 @@ st.markdown("""
 <div class="neo-subtitle">Prototipe UI Capstone Cangkringan ML — Sprint 1</div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🏠 Dashboard Historis",
     "🔮 Simulasi & Prediksi",
     "📦 Manajemen Stok",
+    "📊 Rekomendasi Produksi (DSS)",
+    "📚 Panduan Literasi Digital",
 ])
 
 # ============================================================
@@ -639,7 +683,7 @@ with tab1:
         # --- KPI row ---
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📊 Total Transaksi", f"{len(filtered_df):,}")
-        c2.metric("📦 Total Volume", f"{filtered_df['volume_permintaan'].sum():,.1f} Ton")
+        c2.metric("📦 Total Volume", f"{filtered_df['volume_permintaan'].sum():,.1f} Unit Produk")
         c3.metric("💰 Rata-rata Harga", f"Rp {filtered_df['harga_satuan_transaksi'].mean():,.0f}")
         c4.metric("🌧️ Curah Hujan", f"{filtered_df['curah_hujan_mm'].mean():,.1f} mm")
 
@@ -669,7 +713,7 @@ with tab1:
             for trace in fig.data:
                 hex_c = trace.line.color or "#FFD600"
                 trace.fillcolor = hex_c.replace(")", ",0.15)").replace("rgb", "rgba") if "rgb" in str(hex_c) else None
-            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="Bulan", y_title="Volume (Ton)")
+            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="Bulan", y_title="Volume (Unit Produk)")
             fig.update_layout(height=420)
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
@@ -683,11 +727,11 @@ with tab1:
             )
             fig.update_traces(
                 marker_line_color="#1a1a1a", marker_line_width=2,
-                texttemplate="%{text:,.0f} Ton", textposition="outside",
+                texttemplate="%{text:,.0f} Unit Produk", textposition="outside",
                 textfont=dict(family="Space Grotesk", size=13, color="#1a1a1a"),
             )
             fig.update_layout(showlegend=False)
-            nb_layout(fig, "📊 Volume per Komoditas", x_title="Volume (Ton)", y_title="")
+            nb_layout(fig, "📊 Volume per Komoditas", x_title="Volume (Unit Produk)", y_title="")
             fig.update_layout(height=420)
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
@@ -726,13 +770,10 @@ with tab1:
                 )
 
             if chart_view == "🎯 Sebaran & Korelasi":
-                avail_komod = [k for k in ["Beras", "Jagung", "Kedelai"] if k in filtered_df["nama_komoditas"].unique()]
+                avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati [Trichogem / Methagem]"] if k in filtered_df["nama_komoditas"].unique()]
                 
                 if len(avail_komod) > 1:
-                    fokus_opts = ["📊 Bandingkan Semua (Subplot)"] + [
-                        f"🌾 {k}" if k == "Beras" else f"🌽 {k}" if k == "Jagung" else f"🌱 {k}"
-                        for k in avail_komod
-                    ]
+                    fokus_opts = ["📊 Bandingkan Semua (Subplot)"] + [f"📦 {k}" for k in avail_komod]
                     sel_fokus = st.segmented_control(
                         "Fokus Komoditas:",
                         options=fokus_opts,
@@ -740,7 +781,7 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 elif len(avail_komod) == 1:
-                    sel_fokus = f"🌾 {avail_komod[0]}" if avail_komod[0] == "Beras" else f"🌽 {avail_komod[0]}" if avail_komod[0] == "Jagung" else f"🌱 {avail_komod[0]}"
+                    sel_fokus = f"📦 {avail_komod[0]}"
                 else:
                     sel_fokus = None
 
@@ -748,10 +789,7 @@ with tab1:
                     cols_count = len(avail_komod)
                     fig_sub = make_subplots(
                         rows=1, cols=cols_count,
-                        subplot_titles=[
-                            f"<b>🌾 {k}</b>" if k == "Beras" else f"<b>🌽 {k}</b>" if k == "Jagung" else f"<b>🌱 {k}</b>"
-                            for k in avail_komod
-                        ],
+                        subplot_titles=[f"<b>📦 {k}</b>" for k in avail_komod],
                         horizontal_spacing=0.07
                     )
                     for idx, k in enumerate(avail_komod, 1):
@@ -772,7 +810,7 @@ with tab1:
                                 hovertemplate=(
                                     "<b>" + k + "</b> (%{customdata[0]})<br>"
                                     "Harga: Rp %{x:,.0f}<br>"
-                                    "Volume: %{y:,.1f} Ton<br>"
+                                    "Volume: %{y:,.1f} Unit Produk<br>"
                                     "Hujan: %{customdata[1]:.1f} mm<extra></extra>"
                                 ),
                                 name=k,
@@ -804,7 +842,7 @@ with tab1:
                             tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
                         )
                         fig_sub.update_yaxes(
-                            title_text="Volume (Ton)" if idx == 1 else "", row=1, col=idx,
+                            title_text="Volume (Unit Produk)" if idx == 1 else "", row=1, col=idx,
                             showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
                             tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
                         )
@@ -847,7 +885,7 @@ with tab1:
                                 name="Garis Tren",
                                 hoverinfo="skip"
                             )
-                        nb_layout(fig_single, f"💰 Sebaran & Distribusi {clean_k}", x_title="Harga Satuan (Rp)", y_title="Volume (Ton)")
+                        nb_layout(fig_single, f"💰 Sebaran & Distribusi {clean_k}", x_title="Harga Satuan (Rp)", y_title="Volume (Unit Produk)")
                         fig_single.update_layout(height=360)
                         st.plotly_chart(fig_single, use_container_width=True, config={"displayModeBar": False})
                         
@@ -856,7 +894,7 @@ with tab1:
                         st.markdown(f"""
                         <div style="display:flex; gap:10px; justify-content:center; font-size:0.85rem; font-weight:600; color:#1a1a1a; margin-top:-5px;">
                             <span class="neo-card" style="padding:4px 12px; margin:0;">💰 Rata-rata: <b>Rp {sub_data['harga_satuan_transaksi'].mean():,.0f}</b></span>
-                            <span class="neo-card" style="padding:4px 12px; margin:0;">📦 Volume: <b>{sub_data['volume_permintaan'].mean():,.1f} Ton</b></span>
+                            <span class="neo-card" style="padding:4px 12px; margin:0;">📦 Volume: <b>{sub_data['volume_permintaan'].mean():,.1f} Unit Produk</b></span>
                             <span class="neo-card" style="padding:4px 12px; margin:0;">📈 Korelasi (r): <b>{corr_val:.3f}</b></span>
                         </div>
                         """, unsafe_allow_html=True)
@@ -874,9 +912,9 @@ with tab1:
                 fig_dual.add_trace(
                     go.Bar(
                         x=monthly["tanggal_permintaan"], y=monthly["vol"],
-                        name="Total Volume (Ton)",
+                        name="Total Volume (Unit Produk)",
                         marker_color="#FFD600", marker_line_color="#1a1a1a", marker_line_width=2,
-                        hovertemplate="<b>%{x|%b %Y}</b><br>Volume: %{y:,.1f} Ton<extra></extra>"
+                        hovertemplate="<b>%{x|%b %Y}</b><br>Volume: %{y:,.1f} Unit Produk<extra></extra>"
                     ),
                     secondary_y=False
                 )
@@ -892,7 +930,7 @@ with tab1:
                     secondary_y=True
                 )
                 fig_dual.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
-                fig_dual.update_yaxes(title_text="Volume (Ton)", showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, secondary_y=False, tickfont=dict(color="#1a1a1a"))
+                fig_dual.update_yaxes(title_text="Volume (Unit Produk)", showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, secondary_y=False, tickfont=dict(color="#1a1a1a"))
                 fig_dual.update_yaxes(title_text="Harga Satuan (Rp)", showgrid=False, linecolor="#1a1a1a", linewidth=2, secondary_y=True, tickfont=dict(color="#1a1a1a"))
                 fig_dual.update_layout(
                     title=dict(text="<b>📅 Tren Dinamika: Volume vs Harga Bulanan</b>", font=dict(family="Space Grotesk, sans-serif", size=16, color="#1a1a1a")),
@@ -904,8 +942,8 @@ with tab1:
                 st.plotly_chart(fig_dual, use_container_width=True, config={"displayModeBar": False})
 
             elif chart_view == "📦 Sebaran Boxplot":
-                avail_komod = [k for k in ["Beras", "Jagung", "Kedelai"] if k in filtered_df["nama_komoditas"].unique()]
-                fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>💰 Sebaran Harga (Rp)</b>", "<b>📦 Sebaran Volume (Ton)</b>"], horizontal_spacing=0.1)
+                avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati [Trichogem / Methagem]"] if k in filtered_df["nama_komoditas"].unique()]
+                fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>💰 Sebaran Harga (Rp)</b>", "<b>📦 Sebaran Volume (Unit Produk)</b>"], horizontal_spacing=0.1)
                 for komod in avail_komod:
                     sub = filtered_df[filtered_df["nama_komoditas"] == komod]
                     fig_box.add_trace(
@@ -944,7 +982,7 @@ with tab1:
                 ["tanggal_permintaan", "nama_komoditas", "volume_permintaan",
                  "harga_satuan_transaksi", "fase_musim", "curah_hujan_mm"]
             ].copy()
-            show.columns = ["Tanggal", "Komoditas", "Volume (Ton)", "Harga (Rp)", "Fase Musim", "Curah Hujan (mm)"]
+            show.columns = ["Tanggal", "Komoditas", "Volume (Unit Produk)", "Harga (Rp)", "Fase Musim", "Curah Hujan (mm)"]
             st.dataframe(show.head(20), use_container_width=True, hide_index=True)
     else:
         st.markdown("""
@@ -1027,11 +1065,14 @@ with tab2:
         for k in selected_komoditas:
             base = abs(simulasi_harga / 1000 - 20) * 2.5 + (hash(k) % 50)
             buf  = base * 0.15
+            stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
+            rekomendasi = max(0, base - stok_aktif + buf)
             pred_rows.append({
                 "Komoditas": k,
-                "Prediksi Permintaan (Ton)": round(base, 1),
-                "Rekomendasi Produksi (Ton)": round(base + buf, 1),
-                "Safety Buffer (Ton)": round(buf, 1),
+                "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
+                "Prediksi Permintaan": round(base, 1),
+                "Rekomendasi Produksi": round(rekomendasi, 1),
+                "Safety Buffer": round(buf, 1),
             })
         pred_df = pd.DataFrame(pred_rows)
 
@@ -1041,17 +1082,17 @@ with tab2:
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 name="Prediksi Permintaan", x=pred_df["Komoditas"],
-                y=pred_df["Prediksi Permintaan (Ton)"],
+                y=pred_df["Prediksi Permintaan"],
                 marker_color="#88D4FF", marker_line_color="#1a1a1a", marker_line_width=2,
             ))
             fig.add_trace(go.Bar(
                 name="Rekomendasi Produksi", x=pred_df["Komoditas"],
-                y=pred_df["Rekomendasi Produksi (Ton)"],
+                y=pred_df["Rekomendasi Produksi"],
                 marker_color="#7BF1A8", marker_line_color="#1a1a1a", marker_line_width=2,
             ))
             fig.add_trace(go.Bar(
                 name="Safety Buffer", x=pred_df["Komoditas"],
-                y=pred_df["Safety Buffer (Ton)"],
+                y=pred_df["Safety Buffer"],
                 marker_color="#FFD600", marker_line_color="#1a1a1a", marker_line_width=2,
             ))
             fig.update_layout(barmode="group")
@@ -1060,9 +1101,8 @@ with tab2:
 
         with ch_right:
             st.markdown("<br>", unsafe_allow_html=True)
-            icons = {"Beras": "🌾", "Jagung": "🌽", "Kedelai": "🫘"}
             for _, r in pred_df.iterrows():
-                ico = icons.get(r["Komoditas"], "🌱")
+                ico = KOMODITAS_ICONS.get(r["Komoditas"], "🌱")
                 st.markdown(f"""
                 <div class="neo-card" style="padding:14px; margin-bottom:10px;">
                     <div style="font-weight:700; font-size:1.05rem; margin-bottom:6px;">
@@ -1070,12 +1110,12 @@ with tab2:
                     </div>
                     <div style="display:flex; justify-content:space-between;">
                         <div><div style="font-size:.7rem; color:#666;">Prediksi</div>
-                             <div style="font-weight:700;">{r['Prediksi Permintaan (Ton)']} Ton</div></div>
+                            <div style="font-weight:700;">{r['Prediksi Permintaan']} {r['Unit']}</div></div>
                         <div><div style="font-size:.7rem; color:#666;">Rekomendasi</div>
-                             <div style="font-weight:700; color:#16a34a;">{r['Rekomendasi Produksi (Ton)']} Ton</div></div>
+                            <div style="font-weight:700; color:#16a34a;">{r['Rekomendasi Produksi']} {r['Unit']}</div></div>
                     </div>
                     <div style="margin-top:6px;">
-                        <span class="neo-badge" style="font-size:.73rem;">Buffer +{r['Safety Buffer (Ton)']} Ton</span>
+                        <span class="neo-badge" style="font-size:.73rem;">Buffer +{r['Safety Buffer']} {r['Unit']}</span>
                     </div>
                 </div>""", unsafe_allow_html=True)
 
@@ -1103,18 +1143,11 @@ with tab3:
     st.markdown("<br>", unsafe_allow_html=True)
 
     if selected_komoditas:
-        # Mock stok data (akan diganti data asli di Sprint 2+)
-        STOK_MOCK = {
-            "Beras":  {"stok": 150.0, "threshold": 100.0, "masa_simpan": 180, "sisa_hari": 120},
-            "Jagung": {"stok": 80.0,  "threshold": 50.0,  "masa_simpan": 120, "sisa_hari": 45},
-            "Kedelai":{"stok": 20.0,  "threshold": 30.0,  "masa_simpan": 90,  "sisa_hari": 15},
-        }
-        DEFAULT = {"stok": 50.0, "threshold": 40.0, "masa_simpan": 90, "sisa_hari": 30}
-
         # --- Status cards ---
         cols = st.columns(len(selected_komoditas))
         for idx, k in enumerate(selected_komoditas):
-            d = STOK_MOCK.get(k, DEFAULT)
+            d = STOK_MOCK.get(k, STOK_DEFAULT)
+            unit = UNIT_PRODUK.get(k, "Unit Produk")
             ratio = d["stok"] / d["threshold"]
             if ratio >= 1.2:
                 status, cls, emoji = "Aman", "status-aman", "✅"
@@ -1126,7 +1159,7 @@ with tab3:
                 status, cls, emoji = "Kritis", "status-kritis", "🚨"
                 card = "neo-card-pink"
 
-            ico = {"Beras": "🌾", "Jagung": "🌽", "Kedelai": "🫘"}.get(k, "🌱")
+            ico = KOMODITAS_ICONS.get(k, "🌱")
 
             with cols[idx]:
                 st.markdown(f"""
@@ -1136,11 +1169,11 @@ with tab3:
                     <div class="{cls}">{emoji} {status}</div>
                     <div style="margin-top:14px;">
                         <div style="font-size:.78rem; color:#333;">Stok Aktual</div>
-                        <div style="font-weight:700; font-size:1.7rem;">{d['stok']} Ton</div>
+                        <div style="font-weight:700; font-size:1.7rem;">{d['stok']} {unit}</div>
                     </div>
                     <div style="margin-top:6px;">
                         <div style="font-size:.78rem; color:#333;">Threshold Min.</div>
-                        <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} Ton</div>
+                        <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} {unit}</div>
                     </div>
                     <div style="margin-top:6px;">
                         <div style="font-size:.78rem; color:#333;">Sisa Masa Simpan</div>
@@ -1153,7 +1186,7 @@ with tab3:
         # --- Gauge charts ---
         gcols = st.columns(len(selected_komoditas))
         for idx, k in enumerate(selected_komoditas):
-            d = STOK_MOCK.get(k, DEFAULT)
+            d = STOK_MOCK.get(k, STOK_DEFAULT)
             pct = d["sisa_hari"] / d["masa_simpan"]
             g_color = "#7BF1A8" if pct > 0.6 else "#FFD600" if pct > 0.3 else "#FF6B9D"
 
@@ -1180,8 +1213,8 @@ with tab3:
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         # --- Alerts ---
-        kritis  = [k for k in selected_komoditas if STOK_MOCK.get(k, DEFAULT)["stok"] < STOK_MOCK.get(k, DEFAULT)["threshold"]]
-        expiring = [k for k in selected_komoditas if STOK_MOCK.get(k, DEFAULT)["sisa_hari"] < 30 and k not in kritis]
+        kritis  = [k for k in selected_komoditas if STOK_MOCK.get(k, STOK_DEFAULT)["stok"] < STOK_MOCK.get(k, STOK_DEFAULT)["threshold"]]
+        expiring = [k for k in selected_komoditas if STOK_MOCK.get(k, STOK_DEFAULT)["sisa_hari"] < 30 and k not in kritis]
 
         if kritis:
             st.markdown(f"""
@@ -1201,3 +1234,23 @@ with tab3:
             <span style="font-size:3rem;">📦</span><br>
             <b>Pilih komoditas di sidebar untuk melihat data stok</b>
         </div>""", unsafe_allow_html=True)
+
+# ============================================================
+# TAB 4 — REKOMENDASI PRODUKSI (DSS)
+# ============================================================
+with tab4:
+    st.markdown("""
+    <div class="neo-card" style="padding:14px; text-align:center;">
+        <span style="font-size:3rem;">📊</span><br>
+        <b>Fitur Rekomendasi Produksi (DSS) sedang dalam pengembangan (Sprint 2).</b>
+    </div>""", unsafe_allow_html=True)
+
+# ============================================================
+# TAB 5 — PANDUAN LITERASI DIGITAL
+# ============================================================
+with tab5:
+    st.markdown("""
+    <div class="neo-card" style="padding:14px; text-align:center;">
+        <span style="font-size:3rem;">📚</span><br>
+        <b>Fitur Panduan Literasi Digital sedang dalam pengembangan (Sprint 2).</b>
+    </div>""", unsafe_allow_html=True)
