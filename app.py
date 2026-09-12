@@ -683,7 +683,11 @@ with tab1:
         # --- KPI row ---
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📊 Total Transaksi", f"{len(filtered_df):,}")
-        c2.metric("📦 Total Volume", f"{filtered_df['volume_permintaan'].sum():,.1f} Unit Produk")
+        total_nilai = (
+            filtered_df["volume_permintaan"]
+            * filtered_df["harga_satuan_transaksi"]
+        ).sum()
+        c2.metric("💰 Total Nilai Estimasi", f"Rp {total_nilai:,.0f}")
         c3.metric("💰 Rata-rata Harga", f"Rp {filtered_df['harga_satuan_transaksi'].mean():,.0f}")
         c4.metric("🌧️ Curah Hujan", f"{filtered_df['curah_hujan_mm'].mean():,.1f} mm")
 
@@ -993,6 +997,31 @@ with tab1:
         """, unsafe_allow_html=True)
 
 # ============================================================
+# PREDICTION DATA — dipakai oleh Tab 2 (inferensi) dan Tab 4 (DSS)
+# ============================================================
+pred_df = pd.DataFrame()
+if selected_komoditas:
+    pred_rows = []
+    historical_df = filtered_df if not filtered_df.empty else df
+    for k in selected_komoditas:
+        sku_history = historical_df.loc[
+            historical_df["nama_komoditas"] == k, "volume_permintaan"
+        ]
+        base_demand = float(sku_history.mean()) if not sku_history.empty else 100.0
+        price_ratio = simulasi_harga / 30000.0
+        demand = round(base_demand * max(0.4, 1.0 - 0.5 * (price_ratio - 1.0)), 1)
+        buf = demand * 0.15
+        stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
+        rekomendasi = max(0, demand - stok_aktif + buf)
+        pred_rows.append({
+            "Komoditas": k,
+            "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
+            "Prediksi Permintaan": demand,
+            "Rekomendasi Produksi": round(rekomendasi, 1),
+            "Safety Buffer": round(buf, 1),
+        })
+    pred_df = pd.DataFrame(pred_rows)
+
 # TAB 2 — SIMULASI & PREDIKSI (WHAT-IF)
 # ============================================================
 with tab2:
@@ -1059,71 +1088,17 @@ with tab2:
     </div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- Prediction chart + cards ---
+    # --- Prediction chart ---
     if selected_komoditas:
-        pred_rows = []
-        for k in selected_komoditas:
-            base = abs(simulasi_harga / 1000 - 20) * 2.5 + (hash(k) % 50)
-            buf  = base * 0.15
-            stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
-            rekomendasi = max(0, base - stok_aktif + buf)
-            pred_rows.append({
-                "Komoditas": k,
-                "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
-                "Prediksi Permintaan": round(base, 1),
-                "Rekomendasi Produksi": round(rekomendasi, 1),
-                "Safety Buffer": round(buf, 1),
-            })
-        pred_df = pd.DataFrame(pred_rows)
-
-        ch_left, ch_right = st.columns([3, 2])
-
-        with ch_left:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                name="Prediksi Permintaan", x=pred_df["Komoditas"],
-                y=pred_df["Prediksi Permintaan"],
-                marker_color="#88D4FF", marker_line_color="#1a1a1a", marker_line_width=2,
-            ))
-            fig.add_trace(go.Bar(
-                name="Rekomendasi Produksi", x=pred_df["Komoditas"],
-                y=pred_df["Rekomendasi Produksi"],
-                marker_color="#7BF1A8", marker_line_color="#1a1a1a", marker_line_width=2,
-            ))
-            fig.add_trace(go.Bar(
-                name="Safety Buffer", x=pred_df["Komoditas"],
-                y=pred_df["Safety Buffer"],
-                marker_color="#FFD600", marker_line_color="#1a1a1a", marker_line_width=2,
-            ))
-            fig.update_layout(barmode="group")
-            nb_layout(fig, f"Estimasi pada Harga Rp {simulasi_harga:,.0f}")
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-        with ch_right:
-            st.markdown("<br>", unsafe_allow_html=True)
-            for _, r in pred_df.iterrows():
-                ico = KOMODITAS_ICONS.get(r["Komoditas"], "🌱")
-                st.markdown(f"""
-                <div class="neo-card" style="padding:14px; margin-bottom:10px;">
-                    <div style="font-weight:700; font-size:1.05rem; margin-bottom:6px;">
-                        {ico} {r['Komoditas']}
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <div><div style="font-size:.7rem; color:#666;">Prediksi</div>
-                            <div style="font-weight:700;">{r['Prediksi Permintaan']} {r['Unit']}</div></div>
-                        <div><div style="font-size:.7rem; color:#666;">Rekomendasi</div>
-                            <div style="font-weight:700; color:#16a34a;">{r['Rekomendasi Produksi']} {r['Unit']}</div></div>
-                    </div>
-                    <div style="margin-top:6px;">
-                        <span class="neo-badge" style="font-size:.73rem;">Buffer +{r['Safety Buffer']} {r['Unit']}</span>
-                    </div>
-                </div>""", unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="neo-card-green" style="padding:14px; text-align:center;">
-            <b>✅ Rekomendasi:</b> Tingkatkan produksi pada komoditas dengan lonjakan permintaan.
-            Buffer 15 % ditambahkan untuk antisipasi fluktuasi.
-        </div>""", unsafe_allow_html=True)
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name="Prediksi Permintaan", x=pred_df["Komoditas"],
+            y=pred_df["Prediksi Permintaan"],
+            marker_color="#88D4FF", marker_line_color="#1a1a1a", marker_line_width=2,
+        ))
+        nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.caption("Grafik ini menampilkan hasil inferensi demand. Rekomendasi produksi tersedia di Tab 4.")
     else:
         st.markdown("""
         <div class="neo-card-yellow" style="text-align:center;">
@@ -1240,17 +1215,55 @@ with tab3:
 # ============================================================
 with tab4:
     st.markdown("""
-    <div class="neo-card" style="padding:14px; text-align:center;">
-        <span style="font-size:3rem;">📊</span><br>
-        <b>Fitur Rekomendasi Produksi (DSS) sedang dalam pengembangan (Sprint 2).</b>
+    <div class="neo-card-green" style="padding:14px;">
+        <b>📊 Rekomendasi Produksi (DSS)</b><br>
+        Formula: <i>Demand - Stok + Safety Buffer</i>, dengan safety buffer 15% dari demand.
     </div>""", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if not pred_df.empty:
+        st.dataframe(
+            pred_df[["Komoditas", "Unit", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]],
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        dss_cols = st.columns(len(pred_df))
+        for idx, row in pred_df.iterrows():
+            ico = KOMODITAS_ICONS.get(row["Komoditas"], "🌱")
+            with dss_cols[idx]:
+                st.markdown(f"""
+                <div class="neo-card" style="padding:14px; text-align:center;">
+                    <div style="font-size:2rem;">{ico}</div>
+                    <div style="font-weight:700;">{row['Komoditas']}</div>
+                    <div style="font-size:.8rem; margin-top:8px;">Produksi yang disarankan</div>
+                    <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">
+                        {row['Rekomendasi Produksi']} {row['Unit']}
+                    </div>
+                </div>""", unsafe_allow_html=True)
+    else:
+        st.info("Pilih minimal satu komoditas di sidebar untuk melihat rekomendasi produksi.")
 
 # ============================================================
 # TAB 5 — PANDUAN LITERASI DIGITAL
 # ============================================================
 with tab5:
     st.markdown("""
-    <div class="neo-card" style="padding:14px; text-align:center;">
-        <span style="font-size:3rem;">📚</span><br>
-        <b>Fitur Panduan Literasi Digital sedang dalam pengembangan (Sprint 2).</b>
+    <div class="neo-card-blue" style="padding:14px;">
+        <b>📚 Ringkasan Panduan Dosis Produk Mitra</b><br>
+        Gunakan produk sesuai dosis pada label kemasan dan SOP mitra untuk komoditas sasaran.
+        Jangan mencampur produk atau menaikkan dosis tanpa arahan pendamping lapangan.
     </div>""", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    dosis_rows = [
+        ["GB Propunic", "Liter", "Ikuti dosis label/SOP; encerkan sesuai petunjuk penggunaan."],
+        ["GB Profeed", "Liter", "Ikuti dosis label/SOP; gunakan pada sasaran pakan sesuai petunjuk."],
+        ["GB Proquatic", "Liter", "Ikuti dosis label/SOP; aplikasikan pada media perairan sesuai petunjuk."],
+        ["Pendawa Subur POC", "Liter", "Ikuti dosis label/SOP; encerkan sebelum aplikasi ke tanaman."],
+        ["Compossap", "Zak", "Ikuti dosis label/SOP; sesuaikan dengan luas lahan dan jenis tanaman."],
+        ["Agen Hayati [Trichogem / Methagem]", "Saset/Kg", "Ikuti dosis label/SOP; simpan dan aplikasikan sesuai arahan mitra."],
+    ]
+    st.dataframe(
+        pd.DataFrame(dosis_rows, columns=["Produk", "Satuan", "Panduan Pemakaian"]),
+        use_container_width=True,
+        hide_index=True,
+    )
