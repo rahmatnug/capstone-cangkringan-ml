@@ -699,13 +699,13 @@ with tab1:
         with left:
             trend = (
                 filtered_df
-                .groupby([pd.Grouper(key="tanggal_permintaan", freq="ME"), "fase_musim"])["volume_permintaan"]
+                .groupby([pd.Grouper(key="tanggal_permintaan", freq="ME"), "nama_komoditas"])["volume_permintaan"]
                 .sum()
                 .reset_index()
             )
             fig = px.area(
                 trend, x="tanggal_permintaan", y="volume_permintaan",
-                color="fase_musim", color_discrete_map=NB_MUSIM,
+                color="nama_komoditas", color_discrete_map=NB_KOMOD,
                 markers=True,
             )
             fig.update_traces(
@@ -999,7 +999,10 @@ with tab1:
 # ============================================================
 # PREDICTION DATA — dipakai oleh Tab 2 (inferensi) dan Tab 4 (DSS)
 # ============================================================
-pred_df = pd.DataFrame()
+if "pred_df" not in st.session_state:
+    st.session_state.pred_df = pd.DataFrame()
+
+st.session_state.pred_df = pd.DataFrame()
 if selected_komoditas:
     pred_rows = []
     historical_df = filtered_df if not filtered_df.empty else df
@@ -1020,7 +1023,7 @@ if selected_komoditas:
             "Rekomendasi Produksi": round(rekomendasi, 1),
             "Safety Buffer": round(buf, 1),
         })
-    pred_df = pd.DataFrame(pred_rows)
+    st.session_state.pred_df = pd.DataFrame(pred_rows)
 
 # TAB 2 — SIMULASI & PREDIKSI (WHAT-IF)
 # ============================================================
@@ -1092,8 +1095,8 @@ with tab2:
     if selected_komoditas:
         fig = go.Figure()
         fig.add_trace(go.Bar(
-            name="Prediksi Permintaan", x=pred_df["Komoditas"],
-            y=pred_df["Prediksi Permintaan"],
+            name="Prediksi Permintaan", x=st.session_state.pred_df["Komoditas"],
+            y=st.session_state.pred_df["Prediksi Permintaan"],
             marker_color="#88D4FF", marker_line_color="#1a1a1a", marker_line_width=2,
         ))
         nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
@@ -1220,15 +1223,15 @@ with tab4:
         Formula: <i>Demand - Stok + Safety Buffer</i>, dengan safety buffer 15% dari demand.
     </div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    if not pred_df.empty:
+    if not st.session_state.pred_df.empty:
         st.dataframe(
-            pred_df[["Komoditas", "Unit", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]],
+            st.session_state.pred_df[["Komoditas", "Unit", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]],
             use_container_width=True,
             hide_index=True,
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        dss_cols = st.columns(len(pred_df))
-        for idx, row in pred_df.iterrows():
+        dss_cols = st.columns(len(st.session_state.pred_df))
+        for idx, row in st.session_state.pred_df.iterrows():
             ico = KOMODITAS_ICONS.get(row["Komoditas"], "🌱")
             with dss_cols[idx]:
                 st.markdown(f"""
