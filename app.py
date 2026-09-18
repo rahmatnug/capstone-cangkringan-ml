@@ -555,6 +555,21 @@ def load_model():
 
 model = load_model()
 
+
+def stub_predictor(base_demand, harga, jalur, fase_musim):
+    """Predict demand for the Sprint 2 end-to-end demo."""
+    channel = jalur[0] if isinstance(jalur, list) else jalur
+    effective_price = harga * (0.9 if channel == "Wholesale (Grosir)" else 1.0)
+    price_factor = effective_price / 30000.0
+    channel_factor = 1.08 if channel == "E-commerce Retail (Eceran)" else 1.0
+    season_factor = {
+        "Rendeng": 1.05,
+        "Gadu": 1.0,
+        "Bera": 0.92,
+    }.get(fase_musim, 1.0)
+    demand = base_demand * max(0.4, 1.0 - 0.5 * (price_factor - 1.0))
+    return max(0.0, round(demand * channel_factor * season_factor, 1))
+
 # ============================================================
 # CHART HELPERS (Neo-Brutalism palette)
 # ============================================================
@@ -1113,6 +1128,9 @@ if selected_komoditas and st.session_state.prediction_requested:
         "Agen Hayati [Trichogem / Methagem]": 6
     }
 
+    selected_channel = jalur_penjualan[0]
+    selected_season = selected_musim[0] if selected_musim else "Rendeng"
+
     for k in selected_komoditas:
         sku_history = historical_df[historical_df["nama_komoditas"] == k]
         
@@ -1120,33 +1138,12 @@ if selected_komoditas and st.session_state.prediction_requested:
         base_demand = float(sku_history["volume_permintaan"].mean()) if not sku_history.empty else 100.0
         curah_hujan_avg = float(sku_history["curah_hujan_mm"].mean()) if not sku_history.empty else 150.0
         
-        # 1. Buat input awal
-        input_dict = {
-            "id_poktan": [1],
-            "id_komoditas": [komoditas_id_map.get(k, 1)],
-            "harga_satuan_transaksi": [simulasi_harga],
-            "curah_hujan_mm": [curah_hujan_avg],
-            "lag_1w": [base_demand],
-            "lag_4w": [base_demand],
-            "lag_7w": [base_demand],
-            "rolling_mean_4w": [base_demand],
-            "fase_musim": [selected_musim[0] if selected_musim else "Rendeng"]
-        }
-        X_input = pd.DataFrame(input_dict)
-        
-        # 2. Match persis dengan fitur_input dari pipeline.pkl
-        X_encoded = pd.get_dummies(X_input, columns=["fase_musim"])
-        X_ready = X_encoded.reindex(columns=FITUR_INPUT, fill_value=0)
-        
-        # 3. Prediksi XGBoost dengan Fallback
-        if model is not None:
-            try:
-                demand = float(model.predict(X_ready)[0])
-                demand = max(0.0, round(demand, 1))
-            except Exception:
-                demand = round(base_demand * max(0.4, 1.0 - 0.5 * ((simulasi_harga / 30000.0) - 1.0)), 1)
-        else:
-            demand = round(base_demand * max(0.4, 1.0 - 0.5 * ((simulasi_harga / 30000.0) - 1.0)), 1)
+        demand = stub_predictor(
+            base_demand=base_demand,
+            harga=simulasi_harga,
+            jalur=selected_channel,
+            fase_musim=selected_season,
+        )
             
         buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
@@ -1155,6 +1152,7 @@ if selected_komoditas and st.session_state.prediction_requested:
         pred_rows.append({
             "Komoditas": k,
             "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
+            "Jalur Penjualan": selected_channel,
             "Prediksi Permintaan": demand,
             "Rekomendasi Produksi": rekomendasi,
             "Safety Buffer": buf,
@@ -1234,9 +1232,14 @@ with tab2:
         fig.add_trace(go.Bar(
             name="Prediksi Permintaan", x=st.session_state.pred_df["Komoditas"],
             y=st.session_state.pred_df["Prediksi Permintaan"],
-            marker_color="#88D4FF", marker_line_color="#1a1a1a", marker_line_width=2,
+            text=st.session_state.pred_df["Prediksi Permintaan"].map(lambda value: f"{value:.1f}"),
+            textposition="outside",
+            marker_color=[NB_KOMOD.get(name, "#88D4FF") for name in st.session_state.pred_df["Komoditas"]],
+            marker_line_color="#1a1a1a", marker_line_width=2,
+            hovertemplate="<b>%{x}</b><br>Demand: %{y:.1f}<extra></extra>",
         ))
         nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
+        fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         st.caption("Grafik ini menampilkan hasil inferensi demand. Rekomendasi produksi tersedia di Tab 4.")
     else:
@@ -1362,7 +1365,7 @@ with tab4:
     st.markdown("<br>", unsafe_allow_html=True)
     if not st.session_state.pred_df.empty:
         st.dataframe(
-            st.session_state.pred_df[["Komoditas", "Unit", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]],
+            st.session_state.pred_df[["Komoditas", "Unit", "Jalur Penjualan", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]],
             use_container_width=True,
             hide_index=True,
         )
@@ -1375,6 +1378,7 @@ with tab4:
                 <div class="neo-card" style="padding:14px; text-align:center;">
                     <div style="font-size:2rem;">{ico}</div>
                     <div style="font-weight:700;">{row['Komoditas']}</div>
+                    <div style="font-size:.75rem; margin-top:6px;">{row['Jalur Penjualan']}</div>
                     <div style="font-size:.8rem; margin-top:8px;">Produksi yang disarankan</div>
                     <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">
                         {row['Rekomendasi Produksi']} {row['Unit']}
