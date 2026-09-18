@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import os
+import joblib
 
 # ============================================================
 # PAGE CONFIG
@@ -81,6 +82,41 @@ h1, h2, h3, h4, p, span, label, div {
 }
 /* Dropdown menu */
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="popover"] {
+    background: #FFFFFF !important;
+    border: 3px solid #1a1a1a !important;
+    border-radius: 12px !important;
+}
+
+/* --- Sidebar: Selectbox --- */
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+    min-height: 48px !important;
+    border: 3px solid #1a1a1a !important;
+    border-radius: 12px !important;
+    box-shadow: 3px 3px 0px #1a1a1a !important;
+    background: #FFFFFF !important;
+    color: #1a1a1a !important;
+}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"],
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div,
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] [role="combobox"] {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] input {
+    color: #1a1a1a !important;
+    -webkit-text-fill-color: #1a1a1a !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] input::placeholder {
+    color: #555555 !important;
+    -webkit-text-fill-color: #555555 !important;
+    opacity: 1 !important;
+}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] svg {
+    fill: #1a1a1a !important;
+}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="popover"] {
     background: #FFFFFF !important;
     border: 3px solid #1a1a1a !important;
     border-radius: 12px !important;
@@ -493,6 +529,33 @@ def load_data():
 df = load_data()
 
 # ============================================================
+# LOAD MODEL & KONTRAK INFERENSI
+# ============================================================
+FITUR_INPUT = [
+    'id_poktan', 'id_komoditas', 'harga_satuan_transaksi', 
+    'curah_hujan_mm', 'lag_1w', 'lag_4w', 'lag_7w', 
+    'rolling_mean_4w', 'fase_musim_Bera', 'fase_musim_Gadu', 'fase_musim_Rendeng'
+]
+
+@st.cache_resource
+def load_model():
+    """Memuat model ML secara otomatis"""
+    # Cek model_demand.pkl terlebih dahulu, lalu pipeline.pkl
+    for path in ["model_demand.pkl", "pipeline.pkl"]:
+        if os.path.exists(path):
+            try:
+                obj = joblib.load(path)
+            except Exception:
+                continue
+            # Jika file pkl berupa dictionary yang menyimpan objek model
+            if isinstance(obj, dict):
+                return obj.get("model", None)
+            return obj
+    return None
+
+model = load_model()
+
+# ============================================================
 # CHART HELPERS (Neo-Brutalism palette)
 # ============================================================
 NB_MUSIM   = {"Rendeng": "#FFD600", "Gadu": "#7BF1A8", "Bera": "#88D4FF"}
@@ -586,7 +649,11 @@ st.sidebar.markdown("""
 selected_komoditas = []
 selected_musim     = []
 simulasi_harga     = 0.0
+jalur_penjualan    = []
 filtered_df        = pd.DataFrame()
+
+if "prediction_requested" not in st.session_state:
+    st.session_state.prediction_requested = False
 
 if not df.empty:
     # Komoditas
@@ -594,6 +661,17 @@ if not df.empty:
     komoditas_list = list(KOMODITAS_ICONS.keys())
     selected_komoditas = st.sidebar.multiselect(
         "Pilih Komoditas", komoditas_list, default=komoditas_list, label_visibility="collapsed"
+    )
+
+    # Jalur penjualan menjadi bagian dari kontrak input Sprint 2.
+    st.sidebar.markdown("### 🛒 Jalur Penjualan")
+    jalur_penjualan = st.sidebar.multiselect(
+        "Pilih Jalur Penjualan",
+        ["Wholesale (Grosir)", "E-commerce Retail (Eceran)"],
+        default=[],
+        max_selections=1,
+        placeholder="Pilih jalur penjualan...",
+        label_visibility="collapsed",
     )
 
     # Fase Musim
@@ -644,6 +722,23 @@ if not df.empty:
         """,
         unsafe_allow_html=True,
     )
+
+    prediksi_diklik = st.sidebar.button("🔮 Prediksi", type="primary", use_container_width=True)
+    if prediksi_diklik:
+        validation_errors = []
+        if not selected_komoditas:
+            validation_errors.append("pilih minimal satu produk")
+        if not jalur_penjualan:
+            validation_errors.append("pilih jalur penjualan")
+        if not isinstance(date_range, tuple) or len(date_range) != 2:
+            validation_errors.append("lengkapi rentang tanggal")
+
+        if validation_errors:
+            st.session_state.prediction_requested = False
+            st.sidebar.error("Harap " + ", ".join(validation_errors) + ".")
+        else:
+            st.session_state.prediction_requested = True
+            st.sidebar.success("Input valid. Prediksi berhasil dibuat.")
 
     # Apply filters
     filtered_df = df[
@@ -1003,26 +1098,68 @@ if "pred_df" not in st.session_state:
     st.session_state.pred_df = pd.DataFrame()
 
 st.session_state.pred_df = pd.DataFrame()
-if selected_komoditas:
+
+if selected_komoditas and st.session_state.prediction_requested:
     pred_rows = []
     historical_df = filtered_df if not filtered_df.empty else df
+    
+    # Mapping nama komoditas ke ID (sesuai schema)
+    komoditas_id_map = {
+        "GB Propunic": 1,
+        "GB Profeed": 2,
+        "GB Proquatic": 3,
+        "Pendawa Subur POC": 4,
+        "Compossap": 5,
+        "Agen Hayati [Trichogem / Methagem]": 6
+    }
+
     for k in selected_komoditas:
-        sku_history = historical_df.loc[
-            historical_df["nama_komoditas"] == k, "volume_permintaan"
-        ]
-        base_demand = float(sku_history.mean()) if not sku_history.empty else 100.0
-        price_ratio = simulasi_harga / 30000.0
-        demand = round(base_demand * max(0.4, 1.0 - 0.5 * (price_ratio - 1.0)), 1)
-        buf = demand * 0.15
+        sku_history = historical_df[historical_df["nama_komoditas"] == k]
+        
+        # Ambil baseline dari data historis
+        base_demand = float(sku_history["volume_permintaan"].mean()) if not sku_history.empty else 100.0
+        curah_hujan_avg = float(sku_history["curah_hujan_mm"].mean()) if not sku_history.empty else 150.0
+        
+        # 1. Buat input awal
+        input_dict = {
+            "id_poktan": [1],
+            "id_komoditas": [komoditas_id_map.get(k, 1)],
+            "harga_satuan_transaksi": [simulasi_harga],
+            "curah_hujan_mm": [curah_hujan_avg],
+            "lag_1w": [base_demand],
+            "lag_4w": [base_demand],
+            "lag_7w": [base_demand],
+            "rolling_mean_4w": [base_demand],
+            "fase_musim": [selected_musim[0] if selected_musim else "Rendeng"]
+        }
+        X_input = pd.DataFrame(input_dict)
+        
+        # 2. Match persis dengan fitur_input dari pipeline.pkl
+        X_encoded = pd.get_dummies(X_input, columns=["fase_musim"])
+        X_ready = X_encoded.reindex(columns=FITUR_INPUT, fill_value=0)
+        
+        # 3. Prediksi XGBoost dengan Fallback
+        if model is not None:
+            try:
+                demand = float(model.predict(X_ready)[0])
+                demand = max(0.0, round(demand, 1))
+            except Exception:
+                demand = round(base_demand * max(0.4, 1.0 - 0.5 * ((simulasi_harga / 30000.0) - 1.0)), 1)
+        else:
+            demand = round(base_demand * max(0.4, 1.0 - 0.5 * ((simulasi_harga / 30000.0) - 1.0)), 1)
+            
+        buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
-        rekomendasi = max(0, demand - stok_aktif + buf)
+        rekomendasi = max(0.0, round(demand - stok_aktif + buf, 1))
+        
         pred_rows.append({
             "Komoditas": k,
             "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
             "Prediksi Permintaan": demand,
-            "Rekomendasi Produksi": round(rekomendasi, 1),
-            "Safety Buffer": round(buf, 1),
+            "Rekomendasi Produksi": rekomendasi,
+            "Safety Buffer": buf,
         })
+        
     st.session_state.pred_df = pd.DataFrame(pred_rows)
 
 # TAB 2 — SIMULASI & PREDIKSI (WHAT-IF)
@@ -1092,7 +1229,7 @@ with tab2:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- Prediction chart ---
-    if selected_komoditas:
+    if selected_komoditas and st.session_state.prediction_requested:
         fig = go.Figure()
         fig.add_trace(go.Bar(
             name="Prediksi Permintaan", x=st.session_state.pred_df["Komoditas"],
