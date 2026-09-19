@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 import numpy as np
 import os
 import joblib
+from predict import DemandPredictor
 
 # ============================================================
 # PAGE CONFIG
@@ -556,19 +557,11 @@ def load_model():
 model = load_model()
 
 
-def stub_predictor(base_demand, harga, jalur, fase_musim):
-    """Predict demand for the Sprint 2 end-to-end demo."""
-    channel = jalur[0] if isinstance(jalur, list) else jalur
-    effective_price = harga * (0.9 if channel == "Wholesale (Grosir)" else 1.0)
-    price_factor = effective_price / 30000.0
-    channel_factor = 1.08 if channel == "E-commerce Retail (Eceran)" else 1.0
-    season_factor = {
-        "Rendeng": 1.05,
-        "Gadu": 1.0,
-        "Bera": 0.92,
-    }.get(fase_musim, 1.0)
-    demand = base_demand * max(0.4, 1.0 - 0.5 * (price_factor - 1.0))
-    return max(0.0, round(demand * channel_factor * season_factor, 1))
+@st.cache_resource
+def get_predictor():
+    return DemandPredictor()
+
+predictor = get_predictor()
 
 # ============================================================
 # CHART HELPERS (Neo-Brutalism palette)
@@ -774,7 +767,7 @@ else:
 # ============================================================
 st.markdown("""
 <div class="neo-title">🌾 Dasbor Prediksi Produksi Pertanian</div>
-<div class="neo-subtitle">Prototipe UI Capstone Cangkringan ML — Sprint 1</div>
+<div class="neo-subtitle">Prototipe UI Capstone Cangkringan ML — Sprint 3</div>
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -1138,12 +1131,18 @@ if selected_komoditas and st.session_state.prediction_requested:
         base_demand = float(sku_history["volume_permintaan"].mean()) if not sku_history.empty else 100.0
         curah_hujan_avg = float(sku_history["curah_hujan_mm"].mean()) if not sku_history.empty else 150.0
         
-        demand = stub_predictor(
-            base_demand=base_demand,
-            harga=simulasi_harga,
-            jalur=selected_channel,
-            fase_musim=selected_season,
-        )
+        raw_input = [{
+            'id_poktan': 1,
+            'id_komoditas': komoditas_id_map.get(k, 0),
+            'harga_satuan_transaksi': simulasi_harga,
+            'curah_hujan_mm': curah_hujan_avg,
+            'lag_1w': base_demand,
+            'lag_4w': base_demand,
+            'lag_7w': base_demand,
+            'rolling_mean_4w': base_demand,
+            'fase_musim': selected_season
+        }]
+        demand = predictor.predict(raw_input)
             
         buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
@@ -1167,7 +1166,7 @@ with tab2:
     st.markdown("""
     <div class="neo-card" style="margin-bottom:1.5rem;">
         <div style="text-align:center; margin-bottom:.8rem;">
-            <span class="neo-badge">SPRINT 1 — MOCKUP ALUR INFERENSI</span>
+            <span class="neo-badge">SPRINT 3 — MOCKUP ALUR INFERENSI</span>
         </div>
         <div class="flow-container">
             <div class="flow-step flow-step-active">
@@ -1185,7 +1184,7 @@ with tab2:
             <div class="flow-step">
                 <div style="font-size:1.4rem;">🧠</div>
                 <div>Model ML</div>
-                <div style="font-size:.7rem; color:#666;">Sprint 2 🔒</div>
+                <div style="font-size:.7rem; color:#666;">Sprint 3 🔓</div>
             </div>
             <div class="flow-arrow">→</div>
             <div class="flow-step flow-step-active">
@@ -1220,9 +1219,9 @@ with tab2:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    <div class="neo-card-pink" style="padding:14px;">
-        <b>🚧 Model Machine Learning sedang dalam pengembangan (Sprint 2).</b><br>
-        Visualisasi di bawah merupakan data <i>dummy</i> hasil simulasi berbasis parameter input sidebar.
+    <div class="neo-card-green" style="padding:14px;">
+        <b>✅ Model Machine Learning (XGBoost) Aktif</b><br>
+        Visualisasi di bawah merupakan hasil prediksi demand berdasarkan parameter input sidebar.
     </div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1237,11 +1236,12 @@ with tab2:
             marker_color=[NB_KOMOD.get(name, "#88D4FF") for name in st.session_state.pred_df["Komoditas"]],
             marker_line_color="#1a1a1a", marker_line_width=2,
             hovertemplate="<b>%{x}</b><br>Demand: %{y:.1f}<extra></extra>",
+            error_y=dict(type='percent', value=5),
         ))
         nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-        st.caption("Grafik ini menampilkan hasil inferensi demand. Rekomendasi produksi tersedia di Tab 4.")
+        st.caption("Grafik ini menampilkan hasil inferensi demand. Pita error (±5%) merupakan hampiran (approximation) visual untuk 95% Confidence Interval. Rekomendasi produksi tersedia di Tab 4.")
     else:
         st.markdown("""
         <div class="neo-card-yellow" style="text-align:center;">
