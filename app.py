@@ -405,7 +405,7 @@ hr { border: 2px solid #1a1a1a !important; }
 ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
 
 /* ========== NUCLEAR: force ALL text black ========== */
-.stApp, .stApp * {
+.stApp {
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
 }
@@ -806,10 +806,11 @@ with tab1:
                 .sum()
                 .reset_index()
             )
+            trend["Satuan"] = trend["nama_komoditas"].map(UNIT_PRODUK)
             fig = px.area(
                 trend, x="tanggal_permintaan", y="volume_permintaan",
                 color="nama_komoditas", color_discrete_map=NB_KOMOD,
-                markers=True,
+                markers=True, facet_row="Satuan"
             )
             fig.update_traces(
                 line_width=3,
@@ -820,26 +821,34 @@ with tab1:
             for trace in fig.data:
                 hex_c = trace.line.color or "#FFD600"
                 trace.fillcolor = hex_c.replace(")", ",0.15)").replace("rgb", "rgba") if "rgb" in str(hex_c) else None
-            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="Bulan", y_title="Volume (Unit Produk)")
-            fig.update_layout(height=420)
+            
+            fig.update_yaxes(matches=None, showticklabels=True)
+            fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="Bulan", y_title="Volume")
+            fig.update_layout(height=550)
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         with right:
             vol = filtered_df.groupby("nama_komoditas")["volume_permintaan"].sum().reset_index()
-            vol = vol.sort_values("volume_permintaan", ascending=True)
+            vol["Satuan"] = vol["nama_komoditas"].map(UNIT_PRODUK)
+            vol = vol.sort_values(["volume_permintaan"], ascending=True)
             fig = px.bar(
                 vol, y="nama_komoditas", x="volume_permintaan",
                 color="nama_komoditas", color_discrete_map=NB_KOMOD,
                 orientation="h", text="volume_permintaan",
+                facet_row="Satuan"
             )
             fig.update_traces(
                 marker_line_color="#1a1a1a", marker_line_width=2,
-                texttemplate="%{text:,.0f} Unit Produk", textposition="outside",
+                texttemplate="%{text:,.0f}", textposition="outside",
                 textfont=dict(family="Space Grotesk", size=13, color="#1a1a1a"),
             )
+            fig.update_xaxes(matches=None, showticklabels=True)
+            fig.update_yaxes(matches=None, showticklabels=True)
+            fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
             fig.update_layout(showlegend=False)
-            nb_layout(fig, "📊 Volume per Komoditas", x_title="Volume (Unit Produk)", y_title="")
-            fig.update_layout(height=420)
+            nb_layout(fig, "📊 Volume per Komoditas", x_title="Volume", y_title="")
+            fig.update_layout(height=550)
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1262,73 +1271,79 @@ with tab3:
 
     if selected_komoditas:
         # --- Status cards ---
-        cols = st.columns(len(selected_komoditas))
-        for idx, k in enumerate(selected_komoditas):
-            d = STOK_MOCK.get(k, STOK_DEFAULT)
-            unit = UNIT_PRODUK.get(k, "Unit Produk")
-            ratio = d["stok"] / d["threshold"]
-            if ratio >= 1.2:
-                status, cls, emoji = "Aman", "status-aman", "✅"
-                card = "neo-card-green"
-            elif ratio >= 1.0:
-                status, cls, emoji = "Peringatan", "status-peringatan", "⚠️"
-                card = "neo-card-yellow"
-            else:
-                status, cls, emoji = "Kritis", "status-kritis", "🚨"
-                card = "neo-card-pink"
+        for i in range(0, len(selected_komoditas), 3):
+            cols = st.columns(3)
+            for j in range(3):
+                if i + j < len(selected_komoditas):
+                    k = selected_komoditas[i + j]
+                    d = STOK_MOCK.get(k, STOK_DEFAULT)
+                    unit = UNIT_PRODUK.get(k, "Unit Produk")
+                    ratio = d["stok"] / d["threshold"]
+                    if ratio >= 1.2:
+                        status, cls, emoji = "Aman", "status-aman", "✅"
+                        card = "neo-card-green"
+                    elif ratio >= 1.0:
+                        status, cls, emoji = "Peringatan", "status-peringatan", "⚠️"
+                        card = "neo-card-yellow"
+                    else:
+                        status, cls, emoji = "Kritis", "status-kritis", "🚨"
+                        card = "neo-card-pink"
 
-            ico = KOMODITAS_ICONS.get(k, "🌱")
+                    ico = KOMODITAS_ICONS.get(k, "🌱")
 
-            with cols[idx]:
-                st.markdown(f"""
-                <div class="{card}" style="text-align:center;">
-                    <div style="font-size:2.5rem;">{ico}</div>
-                    <div style="font-weight:700; font-size:1.3rem; margin:6px 0;">{k}</div>
-                    <div class="{cls}">{emoji} {status}</div>
-                    <div style="margin-top:14px;">
-                        <div style="font-size:.78rem; color:#333;">Stok Aktual</div>
-                        <div style="font-weight:700; font-size:1.7rem;">{d['stok']} {unit}</div>
-                    </div>
-                    <div style="margin-top:6px;">
-                        <div style="font-size:.78rem; color:#333;">Threshold Min.</div>
-                        <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} {unit}</div>
-                    </div>
-                    <div style="margin-top:6px;">
-                        <div style="font-size:.78rem; color:#333;">Sisa Masa Simpan</div>
-                        <div style="font-weight:700; font-size:1.15rem;">{d['sisa_hari']} hari</div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
+                    with cols[j]:
+                        st.markdown(f"""
+                        <div class="{card}" style="text-align:center;">
+                            <div style="font-size:2.5rem;">{ico}</div>
+                            <div style="font-weight:700; font-size:1.3rem; margin:6px 0;">{k}</div>
+                            <div class="{cls}">{emoji} {status}</div>
+                            <div style="margin-top:14px;">
+                                <div style="font-size:.78rem; color:#333;">Stok Aktual</div>
+                                <div style="font-weight:700; font-size:1.7rem;">{d['stok']} {unit}</div>
+                            </div>
+                            <div style="margin-top:6px;">
+                                <div style="font-size:.78rem; color:#333;">Threshold Min.</div>
+                                <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} {unit}</div>
+                            </div>
+                            <div style="margin-top:6px;">
+                                <div style="font-size:.78rem; color:#333;">Sisa Masa Simpan</div>
+                                <div style="font-weight:700; font-size:1.15rem;">{d['sisa_hari']} hari</div>
+                            </div>
+                        </div>""", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # --- Gauge charts ---
-        gcols = st.columns(len(selected_komoditas))
-        for idx, k in enumerate(selected_komoditas):
-            d = STOK_MOCK.get(k, STOK_DEFAULT)
-            pct = d["sisa_hari"] / d["masa_simpan"]
-            g_color = "#7BF1A8" if pct > 0.6 else "#FFD600" if pct > 0.3 else "#FF6B9D"
+        for i in range(0, len(selected_komoditas), 3):
+            gcols = st.columns(3)
+            for j in range(3):
+                if i + j < len(selected_komoditas):
+                    k = selected_komoditas[i + j]
+                    d = STOK_MOCK.get(k, STOK_DEFAULT)
+                    pct = d["sisa_hari"] / d["masa_simpan"]
+                    g_color = "#7BF1A8" if pct > 0.6 else "#FFD600" if pct > 0.3 else "#FF6B9D"
 
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number+delta",
-                value=d["sisa_hari"],
-                number=dict(suffix=" hari", font=dict(family="Space Grotesk", size=22, color="#1a1a1a")),
-                delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%"),
-                gauge=dict(
-                    axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a"),
-                    bar=dict(color=g_color, line=dict(color="#1a1a1a", width=2)),
-                    bgcolor="#FFFFFF",
-                    bordercolor="#1a1a1a", borderwidth=2,
-                    steps=[
-                        dict(range=[0, d["masa_simpan"] * 0.3], color="#FFE4E8"),
-                        dict(range=[d["masa_simpan"] * 0.3, d["masa_simpan"] * 0.6], color="#FFF8DC"),
-                        dict(range=[d["masa_simpan"] * 0.6, d["masa_simpan"]], color="#E8FFF0"),
-                    ],
-                ),
-            ))
-            nb_layout(fig, f"Masa Simpan — {k}")
-            fig.update_layout(height=270, margin=dict(t=55, b=15, l=25, r=25))
-            with gcols[idx]:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                    fig = go.Figure(go.Indicator(
+                        mode="gauge+number+delta",
+                        value=d["sisa_hari"],
+                        number=dict(suffix=" hari", font=dict(family="Space Grotesk", size=22, color="#1a1a1a")),
+                        delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%"),
+                        gauge=dict(
+                            axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a"),
+                            bar=dict(color=g_color, line=dict(color="#1a1a1a", width=2)),
+                            bgcolor="#FFFFFF",
+                            bordercolor="#1a1a1a", borderwidth=2,
+                            steps=[
+                                dict(range=[0, d["masa_simpan"] * 0.3], color="#FFE4E8"),
+                                dict(range=[d["masa_simpan"] * 0.3, d["masa_simpan"] * 0.6], color="#FFF8DC"),
+                                dict(range=[d["masa_simpan"] * 0.6, d["masa_simpan"]], color="#E8FFF0"),
+                            ],
+                        ),
+                    ))
+                    nb_layout(fig, f"Masa Simpan — {k}")
+                    fig.update_layout(height=270, margin=dict(t=55, b=15, l=25, r=25))
+                    with gcols[j]:
+                        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         # --- Alerts ---
         kritis  = [k for k in selected_komoditas if STOK_MOCK.get(k, STOK_DEFAULT)["stok"] < STOK_MOCK.get(k, STOK_DEFAULT)["threshold"]]
@@ -1370,20 +1385,23 @@ with tab4:
             hide_index=True,
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        dss_cols = st.columns(len(st.session_state.pred_df))
-        for idx, row in st.session_state.pred_df.iterrows():
-            ico = KOMODITAS_ICONS.get(row["Komoditas"], "🌱")
-            with dss_cols[idx]:
-                st.markdown(f"""
-                <div class="neo-card" style="padding:14px; text-align:center;">
-                    <div style="font-size:2rem;">{ico}</div>
-                    <div style="font-weight:700;">{row['Komoditas']}</div>
-                    <div style="font-size:.75rem; margin-top:6px;">{row['Jalur Penjualan']}</div>
-                    <div style="font-size:.8rem; margin-top:8px;">Produksi yang disarankan</div>
-                    <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">
-                        {row['Rekomendasi Produksi']} {row['Unit']}
-                    </div>
-                </div>""", unsafe_allow_html=True)
+        for i in range(0, len(st.session_state.pred_df), 3):
+            dss_cols = st.columns(3)
+            for j in range(3):
+                if i + j < len(st.session_state.pred_df):
+                    row = st.session_state.pred_df.iloc[i + j]
+                    ico = KOMODITAS_ICONS.get(row["Komoditas"], "🌱")
+                    with dss_cols[j]:
+                        st.markdown(f"""
+                        <div class="neo-card" style="padding:14px; text-align:center;">
+                            <div style="font-size:2rem;">{ico}</div>
+                            <div style="font-weight:700;">{row['Komoditas']}</div>
+                            <div style="font-size:.75rem; margin-top:6px;">{row['Jalur Penjualan']}</div>
+                            <div style="font-size:.8rem; margin-top:8px;">Produksi yang disarankan</div>
+                            <div style="font-size:1.35rem; font-weight:700; color:#16a34a;">
+                                {row['Rekomendasi Produksi']} {row['Unit']}
+                            </div>
+                        </div>""", unsafe_allow_html=True)
     else:
         st.info("Pilih minimal satu komoditas di sidebar untuk melihat rekomendasi produksi.")
 
