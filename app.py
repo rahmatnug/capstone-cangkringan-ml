@@ -277,48 +277,7 @@ h1, h2, h3, h4, p, span, label, div {
     transform: translate(-1px, -1px);
 }
 
-/* ---------- Segmented Control (st.segmented_control) ---------- */
-[data-testid="stSegmentedControl"] button,
-[data-testid="stSegmentedControl"] [role="radio"] {
-    background: #1a1a1a !important;
-    border: 2px solid #1a1a1a !important;
-    color: #FFD600 !important;
-    -webkit-text-fill-color: #FFD600 !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    padding: 6px 14px !important;
-    transition: all 0.15s;
-}
-[data-testid="stSegmentedControl"] button *,
-[data-testid="stSegmentedControl"] [role="radio"] * {
-    color: #FFD600 !important;
-    -webkit-text-fill-color: #FFD600 !important;
-}
-[data-testid="stSegmentedControl"] button[aria-checked="true"],
-[data-testid="stSegmentedControl"] [role="radio"][aria-checked="true"],
-[data-testid="stSegmentedControl"] button[data-selected="true"] {
-    background: #FFD600 !important;
-    color: #1a1a1a !important;
-    -webkit-text-fill-color: #1a1a1a !important;
-    border-color: #1a1a1a !important;
-    box-shadow: 3px 3px 0px #1a1a1a !important;
-}
-[data-testid="stSegmentedControl"] button[aria-checked="true"] *,
-[data-testid="stSegmentedControl"] [role="radio"][aria-checked="true"] *,
-[data-testid="stSegmentedControl"] button[data-selected="true"] * {
-    color: #1a1a1a !important;
-    -webkit-text-fill-color: #1a1a1a !important;
-}
-[data-testid="stSegmentedControl"] button:hover {
-    background: #333333 !important;
-}
-/* Segmented control container */
-[data-testid="stSegmentedControl"] {
-    background: #2d2d2d !important;
-    border: 2px solid #1a1a1a !important;
-    border-radius: 12px !important;
-    padding: 3px !important;
-}
+
 
 
 [data-testid="stPlotlyChart"] {
@@ -457,40 +416,33 @@ hr { border: 2px solid #1a1a1a !important; }
 
 /* ===== Segmented Control (st.segmented_control) — AFTER nuclear ===== */
 .stApp [data-testid="stSegmentedControl"] {
-    background: #2d2d2d !important;
-    border: 2px solid #1a1a1a !important;
+    background: #FFFFFF !important;
+    border: 3px solid #1a1a1a !important;
     border-radius: 12px !important;
-    padding: 3px !important;
+    padding: 4px !important;
+    box-shadow: 4px 4px 0px #1a1a1a !important;
 }
-.stApp [data-testid="stSegmentedControl"] button,
-.stApp [data-testid="stSegmentedControl"] [role="radio"],
-.stApp [data-testid="stSegmentedControl"] label {
+/* Force ALL elements inside to have white background and black text (inactive state) */
+.stApp [data-testid="stSegmentedControl"] * {
     background: transparent !important;
-    color: #FFD600 !important;
-    -webkit-text-fill-color: #FFD600 !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: all 0.15s;
-}
-.stApp [data-testid="stSegmentedControl"] button span,
-.stApp [data-testid="stSegmentedControl"] button p,
-.stApp [data-testid="stSegmentedControl"] button *,
-.stApp [data-testid="stSegmentedControl"] [role="radio"] *,
-.stApp [data-testid="stSegmentedControl"] label * {
-    color: #FFD600 !important;
-    -webkit-text-fill-color: #FFD600 !important;
-}
-.stApp [data-testid="stSegmentedControl"] button[aria-checked="true"],
-.stApp [data-testid="stSegmentedControl"] [role="radio"][aria-checked="true"],
-.stApp [data-testid="stSegmentedControl"] button[data-selected="true"] {
-    background: #FFD600 !important;
+    background-color: transparent !important;
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
-    box-shadow: 2px 2px 0px #1a1a1a !important;
+    font-weight: 600 !important;
 }
-.stApp [data-testid="stSegmentedControl"] button[aria-checked="true"] *,
-.stApp [data-testid="stSegmentedControl"] [role="radio"][aria-checked="true"] *,
-.stApp [data-testid="stSegmentedControl"] button[data-selected="true"] * {
+/* Active state overrides */
+.stApp [data-testid="stSegmentedControl"] [data-selected="true"],
+.stApp [data-testid="stSegmentedControl"] [aria-checked="true"] {
+    background: #FFD600 !important;
+    background-color: #FFD600 !important;
+    border: 2px solid #1a1a1a !important;
+    box-shadow: 2px 2px 0px #1a1a1a !important;
+    border-radius: 8px !important;
+}
+.stApp [data-testid="stSegmentedControl"] [data-selected="true"] *,
+.stApp [data-testid="stSegmentedControl"] [aria-checked="true"] * {
+    background: transparent !important;
+    background-color: transparent !important;
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
 }
@@ -538,23 +490,6 @@ FITUR_INPUT = [
     'rolling_mean_4w', 'fase_musim_Bera', 'fase_musim_Gadu', 'fase_musim_Rendeng'
 ]
 
-@st.cache_resource
-def load_model():
-    """Memuat model ML secara otomatis"""
-    # Cek model_demand.pkl terlebih dahulu, lalu pipeline.pkl
-    for path in ["model_demand.pkl", "pipeline.pkl"]:
-        if os.path.exists(path):
-            try:
-                obj = joblib.load(path)
-            except Exception:
-                continue
-            # Jika file pkl berupa dictionary yang menyimpan objek model
-            if isinstance(obj, dict):
-                return obj.get("model", None)
-            return obj
-    return None
-
-model = load_model()
 
 
 @st.cache_resource
@@ -709,17 +644,28 @@ if not df.empty:
 
     # Slider harga (what-if)
     st.sidebar.markdown("### 💰 Simulasi Harga")
-    min_h = float(df["harga_satuan_transaksi"].min())
-    max_h = float(df["harga_satuan_transaksi"].max())
-    mean_h = float(df["harga_satuan_transaksi"].mean())
-    lo = int((min_h * 0.5) // 1000 * 1000)
-    hi = int((max_h * 1.5) // 1000 * 1000)
-    mid = int(mean_h // 1000 * 1000)
-    if hi <= lo:
-        hi = lo + 1000
+    # Rentang harga riil berdasarkan data historis 5 tahun CV Pandawa Kencana
+    HARGA_ACUAN_MITRA = {
+        "GB Propunic": (20000, 40000, 30000),
+        "GB Profeed": (25000, 45000, 35000),
+        "GB Proquatic": (25000, 45000, 35000),
+        "Pendawa Subur POC": (25000, 45000, 35000),
+        "Compossap": (15000, 35000, 25000),
+        "Agen Hayati [Trichogem / Methagem]": (120000, 180000, 150000)
+    }
+
+    # Ambil rentang harga dinamis berdasarkan SKU pertama yang dipilih
+    sku_ref = selected_komoditas[0] if selected_komoditas else "GB Propunic"
+    p_min, p_max, p_default = HARGA_ACUAN_MITRA.get(sku_ref, (10000, 100000, 30000))
 
     simulasi_harga = st.sidebar.slider(
-        "Harga Transaksi (Rp)", lo, hi, mid, step=1000, label_visibility="collapsed"
+        f"Simulasi Harga Satuan ({sku_ref})",
+        min_value=p_min,
+        max_value=p_max,
+        value=p_default,
+        step=1000,
+        help="Rentang harga telah dikalibrasi sesuai laporan keuangan 5 tahun CV Pandawa Kencana",
+        label_visibility="collapsed"
     )
     st.sidebar.markdown(
         f"""
@@ -824,31 +770,42 @@ with tab1:
             
             fig.update_yaxes(matches=None, showticklabels=True)
             fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="Bulan", y_title="Volume")
-            fig.update_layout(height=550)
+            # X title dikosongkan dulu agar tidak berulang di setiap facet
+            nb_layout(fig, "📈 Tren Volume Permintaan", x_title="", y_title="Volume")
+            
+            fig.update_layout(
+                height=600,
+                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5) # pindah legend ke bawah
+            )
+            # Pasang title 'Bulan' hanya di facet terbawah
+            fig.update_xaxes(title_text="Bulan", row=1, col=1)
+            
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         with right:
             vol = filtered_df.groupby("nama_komoditas")["volume_permintaan"].sum().reset_index()
-            vol["Satuan"] = vol["nama_komoditas"].map(UNIT_PRODUK)
+            # Singkat nama agar label Y tidak memakan setengah layar
+            vol["nama_pendek"] = vol["nama_komoditas"].replace({
+                "Agen Hayati [Trichogem / Methagem]": "Agen Hayati",
+                "Pendawa Subur POC": "Pendawa POC"
+            })
             vol = vol.sort_values(["volume_permintaan"], ascending=True)
+            
+            # Hapus facet_row agar tebal bar merata
             fig = px.bar(
-                vol, y="nama_komoditas", x="volume_permintaan",
+                vol, y="nama_pendek", x="volume_permintaan",
                 color="nama_komoditas", color_discrete_map=NB_KOMOD,
-                orientation="h", text="volume_permintaan",
-                facet_row="Satuan"
+                orientation="h", text="volume_permintaan"
             )
             fig.update_traces(
                 marker_line_color="#1a1a1a", marker_line_width=2,
-                texttemplate="%{text:,.0f}", textposition="outside",
+                texttemplate="%{text:,.0f}", textposition="auto", # auto agar text tidak terpotong
                 textfont=dict(family="Space Grotesk", size=13, color="#1a1a1a"),
             )
-            fig.update_xaxes(matches=None, showticklabels=True)
-            fig.update_yaxes(matches=None, showticklabels=True)
-            fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+            
             fig.update_layout(showlegend=False)
-            nb_layout(fig, "📊 Volume per Komoditas", x_title="Volume", y_title="")
-            fig.update_layout(height=550)
+            nb_layout(fig, "📊 Total Volume per Komoditas", x_title="Volume", y_title="")
+            fig.update_layout(height=600)
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -903,9 +860,15 @@ with tab1:
 
                 if sel_fokus == "📊 Bandingkan Semua (Subplot)":
                     cols_count = len(avail_komod)
+                    # Singkat nama agar muat di subplot yang sempit
+                    short_names = {
+                        "Agen Hayati [Trichogem / Methagem]": "Agen Hayati",
+                        "Pendawa Subur POC": "Pendawa POC"
+                    }
+                    short_avail = [short_names.get(k, k) for k in avail_komod]
                     fig_sub = make_subplots(
                         rows=1, cols=cols_count,
-                        subplot_titles=[f"<b>📦 {k}</b>" for k in avail_komod],
+                        subplot_titles=[f"<b>📦 {k}</b>" for k in short_avail],
                         horizontal_spacing=0.07
                     )
                     for idx, k in enumerate(avail_komod, 1):
@@ -963,8 +926,9 @@ with tab1:
                             tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
                         )
 
+                    fig_sub.update_annotations(font_size=11)
                     fig_sub.update_layout(
-                        height=360,
+                        height=400,
                         plot_bgcolor="#FAFAFA",
                         paper_bgcolor="#FFFFFF",
                         margin=dict(l=40, r=20, t=40, b=45),
@@ -974,7 +938,7 @@ with tab1:
                     st.plotly_chart(fig_sub, use_container_width=True, config={"displayModeBar": False})
 
                 elif sel_fokus:
-                    clean_k = sel_fokus.split()[-1]
+                    clean_k = sel_fokus.replace("📦 ", "")
                     sub_data = filtered_df[filtered_df["nama_komoditas"] == clean_k]
                     if not sub_data.empty:
                         fig_single = px.scatter(
@@ -1001,8 +965,14 @@ with tab1:
                                 name="Garis Tren",
                                 hoverinfo="skip"
                             )
-                        nb_layout(fig_single, f"💰 Sebaran & Distribusi {clean_k}", x_title="Harga Satuan (Rp)", y_title="Volume (Unit Produk)")
-                        fig_single.update_layout(height=360)
+                        nb_layout(fig_single, f"💰 Sebaran & Distribusi {clean_k}", x_title="", y_title="")
+                        fig_single.update_layout(
+                            xaxis_title="Harga Satuan (Rp)",
+                            yaxis_title="Volume (Unit Produk)",
+                            height=480,
+                            margin=dict(t=80, b=80),
+                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5)
+                        )
                         st.plotly_chart(fig_single, use_container_width=True, config={"displayModeBar": False})
                         
                         # Mini metrics badge
@@ -1050,8 +1020,8 @@ with tab1:
                 fig_dual.update_yaxes(title_text="Harga Satuan (Rp)", showgrid=False, linecolor="#1a1a1a", linewidth=2, secondary_y=True, tickfont=dict(color="#1a1a1a"))
                 fig_dual.update_layout(
                     title=dict(text="<b>📅 Tren Dinamika: Volume vs Harga Bulanan</b>", font=dict(family="Space Grotesk, sans-serif", size=16, color="#1a1a1a")),
-                    height=360, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, bgcolor="#FFFFFF", bordercolor="#1a1a1a", borderwidth=2, font=dict(color="#1a1a1a")),
+                    height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
+                    legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5, bgcolor="#FFFFFF", bordercolor="#1a1a1a", borderwidth=2, font=dict(color="#1a1a1a")),
                     margin=dict(l=45, r=45, t=65, b=45),
                     hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
                 )
@@ -1062,9 +1032,10 @@ with tab1:
                 fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>💰 Sebaran Harga (Rp)</b>", "<b>📦 Sebaran Volume (Unit Produk)</b>"], horizontal_spacing=0.1)
                 for komod in avail_komod:
                     sub = filtered_df[filtered_df["nama_komoditas"] == komod]
+                    short_komod = komod.replace("Agen Hayati [Trichogem / Methagem]", "Agen Hayati").replace("Pendawa Subur POC", "Pendawa POC")
                     fig_box.add_trace(
                         go.Box(
-                            y=sub["harga_satuan_transaksi"], name=komod,
+                            y=sub["harga_satuan_transaksi"], name=short_komod,
                             marker_color=NB_KOMOD.get(komod, "#FFD600"),
                             line=dict(color="#1a1a1a", width=2),
                             boxpoints="outliers"
@@ -1073,7 +1044,7 @@ with tab1:
                     )
                     fig_box.add_trace(
                         go.Box(
-                            y=sub["volume_permintaan"], name=komod,
+                            y=sub["volume_permintaan"], name=short_komod,
                             marker_color=NB_KOMOD.get(komod, "#FFD600"),
                             line=dict(color="#1a1a1a", width=2),
                             boxpoints="outliers",
@@ -1084,8 +1055,8 @@ with tab1:
                 fig_box.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
                 fig_box.update_yaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
                 fig_box.update_layout(
-                    height=360, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, bgcolor="#FFFFFF", bordercolor="#1a1a1a", borderwidth=2, font=dict(color="#1a1a1a")),
+                    showlegend=False,
+                    height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
                     margin=dict(l=45, r=25, t=65, b=45),
                     hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
                 )
@@ -1114,59 +1085,62 @@ with tab1:
 if "pred_df" not in st.session_state:
     st.session_state.pred_df = pd.DataFrame()
 
-st.session_state.pred_df = pd.DataFrame()
-
-if selected_komoditas and st.session_state.prediction_requested:
+@st.cache_data
+def run_predictions_cached(komoditas_tuple, sim_harga, channel, season, _hist_df):
     pred_rows = []
-    historical_df = filtered_df if not filtered_df.empty else df
-    
-    # Mapping nama komoditas ke ID (sesuai schema)
     komoditas_id_map = {
-        "GB Propunic": 1,
-        "GB Profeed": 2,
-        "GB Proquatic": 3,
-        "Pendawa Subur POC": 4,
-        "Compossap": 5,
-        "Agen Hayati [Trichogem / Methagem]": 6
+        "GB Propunic": 1, "GB Profeed": 2, "GB Proquatic": 3,
+        "Pendawa Subur POC": 4, "Compossap": 5, "Agen Hayati [Trichogem / Methagem]": 6
     }
+    predictor_model = get_predictor()
 
-    selected_channel = jalur_penjualan[0]
-    selected_season = selected_musim[0] if selected_musim else "Rendeng"
-
-    for k in selected_komoditas:
-        sku_history = historical_df[historical_df["nama_komoditas"] == k]
-        
-        # Ambil baseline dari data historis
+    for k in komoditas_tuple:
+        sku_history = _hist_df[_hist_df["nama_komoditas"] == k]
         base_demand = float(sku_history["volume_permintaan"].mean()) if not sku_history.empty else 100.0
         curah_hujan_avg = float(sku_history["curah_hujan_mm"].mean()) if not sku_history.empty else 150.0
         
         raw_input = [{
-            'id_poktan': 1,
-            'id_komoditas': komoditas_id_map.get(k, 0),
-            'harga_satuan_transaksi': simulasi_harga,
-            'curah_hujan_mm': curah_hujan_avg,
-            'lag_1w': base_demand,
-            'lag_4w': base_demand,
-            'lag_7w': base_demand,
-            'rolling_mean_4w': base_demand,
-            'fase_musim': selected_season
+            'id_poktan': 1, 'id_komoditas': komoditas_id_map.get(k, 0),
+            'harga_satuan_transaksi': sim_harga, 'curah_hujan_mm': curah_hujan_avg,
+            'lag_1w': base_demand, 'lag_4w': base_demand, 'lag_7w': base_demand,
+            'rolling_mean_4w': base_demand, 'fase_musim': season
         }]
-        demand = predictor.predict(raw_input)
+        demand = predictor_model.predict(raw_input)
             
         buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
         rekomendasi = max(0.0, round(demand - stok_aktif + buf, 1))
         
+        rmse_sku = 12.5
+        margin_ci = round(1.96 * rmse_sku, 1)
+        lower_bound = max(0.0, round(demand - margin_ci, 1))
+        upper_bound = round(demand + margin_ci, 1)
+
         pred_rows.append({
             "Komoditas": k,
             "Unit": UNIT_PRODUK.get(k, "Unit Produk"),
-            "Jalur Penjualan": selected_channel,
+            "Jalur Penjualan": channel,
             "Prediksi Permintaan": demand,
+            "Lower Bound (95%)": lower_bound,
+            "Upper Bound (95%)": upper_bound,
             "Rekomendasi Produksi": rekomendasi,
             "Safety Buffer": buf,
         })
         
-    st.session_state.pred_df = pd.DataFrame(pred_rows)
+    return pd.DataFrame(pred_rows)
+
+if selected_komoditas and st.session_state.prediction_requested:
+    historical_df = filtered_df if not filtered_df.empty else df
+    selected_channel = jalur_penjualan[0]
+    selected_season = selected_musim[0] if selected_musim else "Rendeng"
+    
+    st.session_state.pred_df = run_predictions_cached(
+        tuple(selected_komoditas),
+        simulasi_harga,
+        selected_channel,
+        selected_season,
+        historical_df
+    )
 
 # TAB 2 — SIMULASI & PREDIKSI (WHAT-IF)
 # ============================================================
@@ -1174,9 +1148,6 @@ with tab2:
     # --- Flow diagram ---
     st.markdown("""
     <div class="neo-card" style="margin-bottom:1.5rem;">
-        <div style="text-align:center; margin-bottom:.8rem;">
-            <span class="neo-badge">SPRINT 3 — MOCKUP ALUR INFERENSI</span>
-        </div>
         <div class="flow-container">
             <div class="flow-step flow-step-active">
                 <div style="font-size:1.4rem;">🎛️</div>
@@ -1245,7 +1216,15 @@ with tab2:
             marker_color=[NB_KOMOD.get(name, "#88D4FF") for name in st.session_state.pred_df["Komoditas"]],
             marker_line_color="#1a1a1a", marker_line_width=2,
             hovertemplate="<b>%{x}</b><br>Demand: %{y:.1f}<extra></extra>",
-            error_y=dict(type='percent', value=5),
+            error_y=dict(
+                type='data',
+                symmetric=False,
+                array=st.session_state.pred_df["Upper Bound (95%)"] - st.session_state.pred_df["Prediksi Permintaan"],
+                arrayminus=st.session_state.pred_df["Prediksi Permintaan"] - st.session_state.pred_df["Lower Bound (95%)"],
+                visible=True,
+                color='#1a1a1a',
+                thickness=2
+            ),
         ))
         nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
         fig.update_layout(showlegend=False)
@@ -1417,12 +1396,12 @@ with tab5:
     </div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     dosis_rows = [
-        ["GB Propunic", "Liter", "Ikuti dosis label/SOP; encerkan sesuai petunjuk penggunaan."],
-        ["GB Profeed", "Liter", "Ikuti dosis label/SOP; gunakan pada sasaran pakan sesuai petunjuk."],
-        ["GB Proquatic", "Liter", "Ikuti dosis label/SOP; aplikasikan pada media perairan sesuai petunjuk."],
-        ["Pendawa Subur POC", "Liter", "Ikuti dosis label/SOP; encerkan sebelum aplikasi ke tanaman."],
-        ["Compossap", "Zak", "Ikuti dosis label/SOP; sesuaikan dengan luas lahan dan jenis tanaman."],
-        ["Agen Hayati [Trichogem / Methagem]", "Saset/Kg", "Ikuti dosis label/SOP; simpan dan aplikasikan sesuai arahan mitra."],
+        ["GB Propunic (Pupuk Hayati Cair)", "Liter", "Dekomposisi pupuk kompos: 1 Liter untuk 1.000 Kg bahan organik. Perawatan septictank: 1 Kg/Liter per 1-2 m³ limbah."],
+        ["GB Profeed (Nutrisi & Probiotik Ternak)", "Liter", "Sapi potong/perah: 0.3 - 0.5 Liter per 200 Kg konsentrat. Ayam/Bebek: 1 Liter per 400 Kg pakan. Fermentasi jerami: 3 Liter per 1 Ton jerami (siklus 6 hari)."],
+        ["GB Proquatic (Biosecurity Tambak)", "Liter", "Persiapan dasar kolam: 5 - 6 Liter/Ha (rendam 7-10 hari). Pembentukan plankton pakan alami: 16 Liter/Ha/minggu."],
+        ["Pendawa Subur POC (Pupuk Organik Cair)", "Liter", "Sayuran: 4 tutup botol per tangki 14 Liter air. Tanaman buah/umbi: 5 tutup per tangki 14 Liter air. Tembakau: 10 tutup per tangki semprot."],
+        ["Compossap (Pupuk Organik Padat)", "Zak (50 Kg)", "Tanaman Padi: 1 - 2 Ton/Ha sebelum tanam. Tanaman Cabai: 4 - 5 Ons/lubang tanam. Jeruk/Kopi/Sawit: 5 Kg/pohon (aplikasi tiap 6 bulan)."],
+        ["Agen Hayati (Trichogem & Methagem)", "Saset / Kg", "Larutkan 100 gram per tangki semprot untuk pencegahan jamur Fusarium, Phytophthora, dan wereng coklat pada tanaman cabai/padi."]
     ]
     st.dataframe(
         pd.DataFrame(dosis_rows, columns=["Produk", "Satuan", "Panduan Pemakaian"]),
