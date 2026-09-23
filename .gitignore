@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Testing, Benchmarking & Playwright Dumps
+scratch/
+*.png
+*.jpg
+*.jpeg
+*.yml
+*.yaml
+*.log
+task-*.log
+.playwright-mcp/
+output.txt
+diff_audit.txt
+browser_evaluate.json

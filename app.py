@@ -5,7 +5,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import os
+import time
 from predict import DemandPredictor
+
+t_rerun_start = time.perf_counter()
 
 # ============================================================
 # PAGE CONFIG
@@ -913,6 +916,328 @@ def run_predictions_cached(komoditas_tuple, sim_harga, channel, season, _hist_df
     return pd.DataFrame(pred_rows)
 
 # ============================================================
+# CACHED VISUALIZATION ROUTINES (RUNTIME PERFORMANCE OPTIMIZATION)
+# ============================================================
+@st.cache_data(show_spinner=False)
+def generate_cached_gauge_figures(selected_komoditas_tuple):
+    """
+    Cached routine for static warehouse inventory gauges in Tab 1.
+    Eliminates redundant Plotly gauge indicator recreation during sidebar slider adjustments.
+    """
+    gauge_figs = {}
+    for k in selected_komoditas_tuple:
+        d = STOK_MOCK.get(k, STOK_DEFAULT)
+        pct = d["sisa_hari"] / d["masa_simpan"]
+        g_color = "#7BF1A8" if pct > 0.6 else "#FFD600" if pct > 0.3 else "#FF6B9D"
+
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=d["sisa_hari"],
+            number=dict(suffix=" hari", font=dict(family="Space Grotesk", size=22, color="#1a1a1a")),
+            delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%"),
+            gauge=dict(
+                axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a"),
+                bar=dict(color=g_color, line=dict(color="#1a1a1a", width=2)),
+                bgcolor="#FFFFFF",
+                bordercolor="#1a1a1a", borderwidth=2,
+                steps=[
+                    dict(range=[0, d["masa_simpan"] * 0.3], color="#FFE4E8"),
+                    dict(range=[d["masa_simpan"] * 0.3, d["masa_simpan"] * 0.6], color="#FFF8DC"),
+                    dict(range=[d["masa_simpan"] * 0.6, d["masa_simpan"]], color="#E8FFF0"),
+                ],
+            ),
+        ))
+        nb_layout(fig, f"Sisa Umur Bakteri Aktif — {k}")
+        fig.update_layout(height=270, margin=dict(t=55, b=15, l=25, r=25))
+        gauge_figs[k] = fig
+    return gauge_figs
+
+
+@st.cache_data(show_spinner=False)
+def generate_cached_historical_figures(df_sub):
+    """
+    Cached routine to generate heavy historical figures (Area Chart, Horizontal Bar, Donut Chart).
+    Eliminates redundant Plotly figure recreation during sidebar slider adjustments.
+    """
+    if df_sub.empty:
+        return None, None, None
+
+    # 1. Dynamic Area Chart (Trend per month & commodity)
+    trend = (
+        df_sub
+        .groupby([pd.Grouper(key="tanggal_permintaan", freq="ME"), "nama_komoditas"])["volume_permintaan"]
+        .sum()
+        .reset_index()
+    )
+    trend["Satuan"] = trend["nama_komoditas"].map(UNIT_PRODUK)
+    fig_trend = px.area(
+        trend, x="tanggal_permintaan", y="volume_permintaan",
+        color="nama_komoditas", color_discrete_map=NB_KOMOD,
+        markers=True, facet_row="Satuan"
+    )
+    fig_trend.update_traces(
+        line_width=3,
+        marker=dict(size=7, line=dict(width=2, color="#1a1a1a")),
+        fillcolor=None,
+    )
+    for trace in fig_trend.data:
+        hex_c = trace.line.color or "#FFD600"
+        trace.fillcolor = hex_c.replace(")", ",0.15)").replace("rgb", "rgba") if "rgb" in str(hex_c) else None
+
+    fig_trend.update_yaxes(matches=None, showticklabels=True)
+    fig_trend.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    nb_layout(fig_trend, "Dinamika Permintaan Produk per Periode Waktu", x_title="", y_title="Volume Penyaluran")
+
+    fig_trend.update_layout(
+        height=600,
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
+    )
+    fig_trend.update_xaxes(title_text="Bulan", row=1, col=1)
+
+    # 2. Horizontal Bar Chart (Volume distribution)
+    vol = df_sub.groupby("nama_komoditas")["volume_permintaan"].sum().reset_index()
+    vol["nama_pendek"] = vol["nama_komoditas"].replace({
+        "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
+        "Pendawa Subur POC": "Pendawa POC"
+    })
+    vol = vol.sort_values(["volume_permintaan"], ascending=True)
+
+    fig_bar = px.bar(
+        vol, y="nama_pendek", x="volume_permintaan",
+        color="nama_komoditas", color_discrete_map=NB_KOMOD,
+        orientation="h", text="volume_permintaan"
+    )
+    fig_bar.update_traces(
+        marker_line_color="#1a1a1a", marker_line_width=2,
+        texttemplate="%{text:,.0f}", textposition="auto",
+        textfont=dict(family="Space Grotesk", size=13, color="#1a1a1a"),
+    )
+
+    fig_bar.update_layout(showlegend=False)
+    nb_layout(fig_bar, "Akumulasi Penyaluran per Komoditas", x_title="Total Volume Terdistribusi", y_title="")
+    fig_bar.update_layout(height=600)
+
+    # 3. Donut Pie Chart (Proportion by season)
+    mcount = df_sub.groupby("fase_musim")["volume_permintaan"].sum().reset_index()
+    fig_donut = px.pie(
+        mcount, values="volume_permintaan", names="fase_musim",
+        color="fase_musim", color_discrete_map=NB_MUSIM, hole=0.45,
+    )
+    fig_donut.update_traces(
+        textinfo="label+percent",
+        textfont=dict(family="Space Grotesk", size=14, color="#1a1a1a"),
+        marker_line=dict(color="#1a1a1a", width=2.5),
+        pull=[0.03, 0.03, 0.03],
+    )
+    nb_layout(fig_donut, "Proporsi Permintaan Berdasarkan Musim Tanam")
+    fig_donut.update_layout(height=400)
+
+    return fig_trend, fig_bar, fig_donut
+
+
+@st.cache_data(show_spinner=False)
+def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
+    """
+    Cached routine for heavy scatter and correlation subplots in Tab 4.
+    """
+    if df_sub.empty:
+        return None
+
+    if chart_view == "Sebaran & Korelasi":
+        avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in df_sub["nama_komoditas"].unique()]
+        
+        if sel_fokus == "Bandingkan Semua Komoditas" or (sel_fokus is None and len(avail_komod) > 1):
+            cols_count = len(avail_komod)
+            short_names = {
+                "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
+                "Pendawa Subur POC": "Pendawa POC"
+            }
+            short_avail = [short_names.get(k, k) for k in avail_komod]
+            fig_sub = make_subplots(
+                rows=1, cols=cols_count,
+                subplot_titles=[f"<b>{k}</b>" for k in short_avail],
+                horizontal_spacing=0.07
+            )
+            for idx, k in enumerate(avail_komod, 1):
+                sub_data = df_sub[df_sub["nama_komoditas"] == k]
+                fig_sub.add_trace(
+                    go.Scatter(
+                        x=sub_data["harga_satuan_transaksi"],
+                        y=sub_data["volume_permintaan"],
+                        mode="markers",
+                        marker=dict(
+                            size=7,
+                            color=NB_KOMOD.get(k, "#FFD600"),
+                            line=dict(width=1.2, color="#1a1a1a"),
+                            opacity=0.75
+                        ),
+                        customdata=np.stack((sub_data["fase_musim"], sub_data["curah_hujan_mm"]), axis=-1),
+                        hovertemplate=(
+                            "<b>" + k + "</b> (%{customdata[0]})<br>"
+                            "Harga: Rp %{x:,.0f}<br>"
+                            "Volume: %{y:,.1f}<br>"
+                            "Hujan: %{customdata[1]:.1f} mm<extra></extra>"
+                        ),
+                        name=k,
+                        showlegend=False
+                    ),
+                    row=1, col=idx
+                )
+                if len(sub_data) > 1:
+                    z = np.polyfit(sub_data["harga_satuan_transaksi"], sub_data["volume_permintaan"], 1)
+                    p = np.poly1d(z)
+                    x_min = sub_data["harga_satuan_transaksi"].min()
+                    x_max = sub_data["harga_satuan_transaksi"].max()
+                    x_line = np.linspace(x_min, x_max, 40)
+                    fig_sub.add_trace(
+                        go.Scatter(
+                            x=x_line, y=p(x_line),
+                            mode="lines",
+                            line=dict(color="#1a1a1a", width=2.5, dash="dot"),
+                            name=f"Tren {k}",
+                            showlegend=False,
+                            hoverinfo="skip"
+                        ),
+                        row=1, col=idx
+                    )
+                fig_sub.update_xaxes(
+                    title_text="Harga (Rp)", row=1, col=idx,
+                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
+                    tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
+                )
+                fig_sub.update_yaxes(
+                    title_text="Volume Pesanan" if idx == 1 else "", row=1, col=idx,
+                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
+                    tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
+                )
+
+            fig_sub.update_annotations(font_size=11)
+            fig_sub.update_layout(
+                height=400,
+                plot_bgcolor="#FAFAFA",
+                paper_bgcolor="#FFFFFF",
+                margin=dict(l=40, r=20, t=40, b=45),
+                font=dict(family="Space Grotesk, sans-serif", size=12, color="#1a1a1a"),
+                hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
+            )
+            return fig_sub
+
+        elif sel_fokus:
+            clean_k = sel_fokus
+            sub_data = df_sub[df_sub["nama_komoditas"] == clean_k]
+            if not sub_data.empty:
+                fig_single = px.scatter(
+                    sub_data, x="harga_satuan_transaksi", y="volume_permintaan",
+                    color="fase_musim", color_discrete_map=NB_MUSIM,
+                    marginal_x="box", marginal_y="box",
+                    hover_data={
+                        "harga_satuan_transaksi": ":.0f",
+                        "volume_permintaan": ":.1f",
+                        "curah_hujan_mm": ":.1f"
+                    }
+                )
+                fig_single.update_traces(
+                    marker=dict(size=9, line=dict(width=1.5, color="#1a1a1a"), opacity=0.8)
+                )
+                if len(sub_data) > 1:
+                    z = np.polyfit(sub_data["harga_satuan_transaksi"], sub_data["volume_permintaan"], 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(sub_data["harga_satuan_transaksi"].min(), sub_data["harga_satuan_transaksi"].max(), 50)
+                    fig_single.add_scatter(
+                        x=x_line, y=p(x_line),
+                        mode="lines",
+                        line=dict(color="#1a1a1a", width=3, dash="dash"),
+                        name="Garis Tren",
+                        hoverinfo="skip"
+                    )
+                nb_layout(fig_single, f"Distribusi Transaksi & Sensitivitas Harga: {clean_k}", x_title="", y_title="")
+                fig_single.update_layout(
+                    xaxis_title="Harga Satuan (Rp)",
+                    yaxis_title="Volume Pesanan",
+                    height=480,
+                    margin=dict(t=80, b=80),
+                    legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5)
+                )
+                return fig_single
+
+    elif chart_view == "Dinamika Bulanan (Dual-Axis)":
+        monthly = (
+            df_sub
+            .groupby(pd.Grouper(key="tanggal_permintaan", freq="MS"))
+            .agg(vol=("volume_permintaan", "sum"), harga=("harga_satuan_transaksi", "mean"))
+            .reset_index()
+        )
+        fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
+        fig_dual.add_trace(
+            go.Bar(
+                x=monthly["tanggal_permintaan"], y=monthly["vol"],
+                name="Total Volume Penyaluran",
+                marker_color="#FFD600", marker_line_color="#1a1a1a", marker_line_width=2,
+                hovertemplate="<b>%{x|%b %Y}</b><br>Volume: %{y:,.1f}<extra></extra>"
+            ),
+            secondary_y=False
+        )
+        fig_dual.add_trace(
+            go.Scatter(
+                x=monthly["tanggal_permintaan"], y=monthly["harga"],
+                name="Rata-rata Harga (Rp)",
+                mode="lines+markers",
+                line=dict(color="#FF6B9D", width=3.5),
+                marker=dict(size=9, color="#FF6B9D", line=dict(width=2, color="#1a1a1a")),
+                hovertemplate="<b>%{x|%b %Y}</b><br>Harga: Rp %{y:,.0f}<extra></extra>"
+            ),
+            secondary_y=True
+        )
+        fig_dual.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
+        fig_dual.update_yaxes(title_text="Total Volume Penyaluran", showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, secondary_y=False, tickfont=dict(color="#1a1a1a"))
+        fig_dual.update_yaxes(title_text="Rata-rata Harga Satuan (Rp)", showgrid=False, linecolor="#1a1a1a", linewidth=2, secondary_y=True, tickfont=dict(color="#1a1a1a"))
+        fig_dual.update_layout(
+            title=dict(text="<b>Dinamika Fluktuasi: Permintaan vs Harga Bulanan</b>", font=dict(family="Space Grotesk, sans-serif", size=16, color="#1a1a1a")),
+            height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
+            legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5, bgcolor="#FFFFFF", bordercolor="#1a1a1a", borderwidth=2, font=dict(color="#1a1a1a")),
+            margin=dict(l=45, r=45, t=65, b=45),
+            hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
+        )
+        return fig_dual
+
+    elif chart_view == "Rentang Variasi (Boxplot)":
+        avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in df_sub["nama_komoditas"].unique()]
+        fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>Sebaran Variasi Harga Transaksi (Rp)</b>", "<b>Sebaran Volume Permintaan</b>"], horizontal_spacing=0.1)
+        for komod in avail_komod:
+            sub = df_sub[df_sub["nama_komoditas"] == komod]
+            short_komod = komod.replace("Agen Hayati (Trichogem / Methagem)", "Agen Hayati").replace("Pendawa Subur POC", "Pendawa POC")
+            fig_box.add_trace(
+                go.Box(
+                    y=sub["harga_satuan_transaksi"], name=short_komod,
+                    marker_color=NB_KOMOD.get(komod, "#FFD600"),
+                    line=dict(color="#1a1a1a", width=2),
+                    boxpoints="outliers"
+                ),
+                row=1, col=1
+            )
+            fig_box.add_trace(
+                go.Box(
+                    y=sub["volume_permintaan"], name=short_komod,
+                    marker_color=NB_KOMOD.get(komod, "#FFD600"),
+                    line=dict(color="#1a1a1a", width=2),
+                    boxpoints="outliers",
+                    showlegend=False
+                ),
+                row=1, col=2
+            )
+        fig_box.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
+        fig_box.update_yaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
+        fig_box.update_layout(
+            showlegend=False,
+            height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
+            margin=dict(l=45, r=25, t=65, b=45),
+            hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
+        )
+        return fig_box
+
+    return None
+
+# ============================================================
 # SIDEBAR — PANEL KONTROL OPERASIONAL PABRIK
 # ============================================================
 st.sidebar.markdown("""
@@ -1062,6 +1387,7 @@ else:
 # ============================================================
 # PREDICTION COMPUTATION & PRE-RENDER DATA PREPARATION
 # ============================================================
+t_pred_start = time.perf_counter()
 if selected_komoditas and st.session_state.prediction_requested:
     try:
         historical_df = filtered_df if not filtered_df.empty else df
@@ -1078,6 +1404,7 @@ if selected_komoditas and st.session_state.prediction_requested:
     except Exception as exc:
         st.warning(f"Kalkulasi estimasi mengalami kendala: {exc}. Menampilkan data cadangan historis.")
         st.session_state.pred_df = pd.DataFrame()
+t_pred_dur = (time.perf_counter() - t_pred_start) * 1000
 
 # Count critical stock SKUs for stepper status
 kritis_list = [k for k in selected_komoditas if STOK_MOCK.get(k, STOK_DEFAULT)["stok"] < STOK_MOCK.get(k, STOK_DEFAULT)["threshold"]]
@@ -1105,6 +1432,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # ============================================================
 # TAB 1 — STOK & MUTU GUDANG
 # ============================================================
+t_tab1_start = time.perf_counter()
 with tab1:
     st.markdown("""
     <div class="neo-card" style="padding:14px;">
@@ -1160,37 +1488,17 @@ with tab1:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- Gauge charts ---
+        # --- Gauge charts (Cached) ---
+        gauge_figs = generate_cached_gauge_figures(tuple(selected_komoditas))
         for i in range(0, len(selected_komoditas), 3):
             gcols = st.columns(3)
             for j in range(3):
                 if i + j < len(selected_komoditas):
                     k = selected_komoditas[i + j]
-                    d = STOK_MOCK.get(k, STOK_DEFAULT)
-                    pct = d["sisa_hari"] / d["masa_simpan"]
-                    g_color = "#7BF1A8" if pct > 0.6 else "#FFD600" if pct > 0.3 else "#FF6B9D"
-
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number+delta",
-                        value=d["sisa_hari"],
-                        number=dict(suffix=" hari", font=dict(family="Space Grotesk", size=22, color="#1a1a1a")),
-                        delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%"),
-                        gauge=dict(
-                            axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a"),
-                            bar=dict(color=g_color, line=dict(color="#1a1a1a", width=2)),
-                            bgcolor="#FFFFFF",
-                            bordercolor="#1a1a1a", borderwidth=2,
-                            steps=[
-                                dict(range=[0, d["masa_simpan"] * 0.3], color="#FFE4E8"),
-                                dict(range=[d["masa_simpan"] * 0.3, d["masa_simpan"] * 0.6], color="#FFF8DC"),
-                                dict(range=[d["masa_simpan"] * 0.6, d["masa_simpan"]], color="#E8FFF0"),
-                            ],
-                        ),
-                    ))
-                    nb_layout(fig, f"Sisa Umur Bakteri Aktif — {k}")
-                    fig.update_layout(height=270, margin=dict(t=55, b=15, l=25, r=25))
-                    with gcols[j]:
-                        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                    fig = gauge_figs.get(k)
+                    if fig is not None:
+                        with gcols[j]:
+                            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         # --- Alerts ---
         kritis  = [k for k in selected_komoditas if STOK_MOCK.get(k, STOK_DEFAULT)["stok"] < STOK_MOCK.get(k, STOK_DEFAULT)["threshold"]]
@@ -1213,10 +1521,12 @@ with tab1:
         <div class="neo-card-yellow" style="text-align:center;">
             <b style="font-size:1.1rem;">Pilih minimal satu komoditas pada panel kontrol sebelah kiri untuk memantau status gudang.</b>
         </div>""", unsafe_allow_html=True)
+t_tab1_dur = (time.perf_counter() - t_tab1_start) * 1000
 
 # ============================================================
 # TAB 2 — RENCANA PRODUKSI (DSS)
 # ============================================================
+t_tab2_start = time.perf_counter()
 with tab2:
     render_dss_production_cards(st.session_state.pred_df)
     
@@ -1241,10 +1551,12 @@ with tab2:
         )
     else:
         st.info("Rekomendasi alokasi batch belum dapat dihitung. Pastikan produk dipilih dan klik tombol 'Hitung Kebutuhan Produksi Pabrik' pada panel sebelah kiri.")
+t_tab2_dur = (time.perf_counter() - t_tab2_start) * 1000
 
 # ============================================================
 # TAB 3 — SIMULASI KEBUTUHAN PASAR (WHAT-IF SENSITIVITY)
 # ============================================================
+t_tab3_start = time.perf_counter()
 with tab3:
     # --- Flow diagram ---
     st.markdown("""
@@ -1329,10 +1641,12 @@ with tab3:
         <div class="neo-card-yellow" style="text-align:center;">
             <b style="font-size:1.1rem;">Kalkulasi simulasi belum dijalankan. Klik tombol 'Hitung Kebutuhan Produksi Pabrik' pada panel sebelah kiri untuk memproses data.</b>
         </div>""", unsafe_allow_html=True)
+t_tab3_dur = (time.perf_counter() - t_tab3_start) * 1000
 
 # ============================================================
 # TAB 4 — TREN PENJUALAN HISTORIS
 # ============================================================
+t_tab4_start = time.perf_counter()
 with tab4:
     if not filtered_df.empty:
         # --- KPI row (Rebalanced 2x2 grid for optimal visual balance & legibility) ---
@@ -1352,66 +1666,19 @@ with tab4:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # --- Generate cached historical figures (Area Chart, Horizontal Bar, Donut Chart) ---
+        fig_trend, fig_bar, fig_donut = generate_cached_historical_figures(filtered_df)
+
         # --- Row: trend + bar ---
         left, right = st.columns([3, 2])
 
         with left:
-            trend = (
-                filtered_df
-                .groupby([pd.Grouper(key="tanggal_permintaan", freq="ME"), "nama_komoditas"])["volume_permintaan"]
-                .sum()
-                .reset_index()
-            )
-            trend["Satuan"] = trend["nama_komoditas"].map(UNIT_PRODUK)
-            fig = px.area(
-                trend, x="tanggal_permintaan", y="volume_permintaan",
-                color="nama_komoditas", color_discrete_map=NB_KOMOD,
-                markers=True, facet_row="Satuan"
-            )
-            fig.update_traces(
-                line_width=3,
-                marker=dict(size=7, line=dict(width=2, color="#1a1a1a")),
-                fillcolor=None,
-            )
-            for trace in fig.data:
-                hex_c = trace.line.color or "#FFD600"
-                trace.fillcolor = hex_c.replace(")", ",0.15)").replace("rgb", "rgba") if "rgb" in str(hex_c) else None
-            
-            fig.update_yaxes(matches=None, showticklabels=True)
-            fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-            nb_layout(fig, "Dinamika Permintaan Produk per Periode Waktu", x_title="", y_title="Volume Penyaluran")
-            
-            fig.update_layout(
-                height=600,
-                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
-            )
-            fig.update_xaxes(title_text="Bulan", row=1, col=1)
-            
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            if fig_trend is not None:
+                st.plotly_chart(fig_trend, use_container_width=True, config={"displayModeBar": False})
 
         with right:
-            vol = filtered_df.groupby("nama_komoditas")["volume_permintaan"].sum().reset_index()
-            vol["nama_pendek"] = vol["nama_komoditas"].replace({
-                "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
-                "Pendawa Subur POC": "Pendawa POC"
-            })
-            vol = vol.sort_values(["volume_permintaan"], ascending=True)
-            
-            fig = px.bar(
-                vol, y="nama_pendek", x="volume_permintaan",
-                color="nama_komoditas", color_discrete_map=NB_KOMOD,
-                orientation="h", text="volume_permintaan"
-            )
-            fig.update_traces(
-                marker_line_color="#1a1a1a", marker_line_width=2,
-                texttemplate="%{text:,.0f}", textposition="auto",
-                textfont=dict(family="Space Grotesk", size=13, color="#1a1a1a"),
-            )
-            
-            fig.update_layout(showlegend=False)
-            nb_layout(fig, "Akumulasi Penyaluran per Komoditas", x_title="Total Volume Terdistribusi", y_title="")
-            fig.update_layout(height=600)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            if fig_bar is not None:
+                st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1419,20 +1686,8 @@ with tab4:
         left2, right2 = st.columns([2, 3])
 
         with left2:
-            mcount = filtered_df.groupby("fase_musim")["volume_permintaan"].sum().reset_index()
-            fig = px.pie(
-                mcount, values="volume_permintaan", names="fase_musim",
-                color="fase_musim", color_discrete_map=NB_MUSIM, hole=0.45,
-            )
-            fig.update_traces(
-                textinfo="label+percent",
-                textfont=dict(family="Space Grotesk", size=14, color="#1a1a1a"),
-                marker_line=dict(color="#1a1a1a", width=2.5),
-                pull=[0.03, 0.03, 0.03],
-            )
-            nb_layout(fig, "Proporsi Permintaan Berdasarkan Musim Tanam")
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            if fig_donut is not None:
+                st.plotly_chart(fig_donut, use_container_width=True, config={"displayModeBar": False})
 
         with right2:
             # Header & Mode Switcher
@@ -1447,9 +1702,9 @@ with tab4:
                     label_visibility="collapsed"
                 )
 
+            sel_fokus = None
             if chart_view == "Sebaran & Korelasi":
                 avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
-                
                 if len(avail_komod) > 1:
                     fokus_opts = ["Bandingkan Semua Komoditas"] + avail_komod
                     sel_fokus = st.segmented_control(
@@ -1460,209 +1715,23 @@ with tab4:
                     )
                 elif len(avail_komod) == 1:
                     sel_fokus = avail_komod[0]
-                else:
-                    sel_fokus = None
 
-                if sel_fokus == "Bandingkan Semua Komoditas":
-                    cols_count = len(avail_komod)
-                    short_names = {
-                        "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
-                        "Pendawa Subur POC": "Pendawa POC"
-                    }
-                    short_avail = [short_names.get(k, k) for k in avail_komod]
-                    fig_sub = make_subplots(
-                        rows=1, cols=cols_count,
-                        subplot_titles=[f"<b>{k}</b>" for k in short_avail],
-                        horizontal_spacing=0.07
-                    )
-                    for idx, k in enumerate(avail_komod, 1):
-                        sub_data = filtered_df[filtered_df["nama_komoditas"] == k]
-                        fig_sub.add_trace(
-                            go.Scatter(
-                                x=sub_data["harga_satuan_transaksi"],
-                                y=sub_data["volume_permintaan"],
-                                mode="markers",
-                                marker=dict(
-                                    size=7,
-                                    color=NB_KOMOD.get(k, "#FFD600"),
-                                    line=dict(width=1.2, color="#1a1a1a"),
-                                    opacity=0.75
-                                ),
-                                customdata=np.stack((sub_data["fase_musim"], sub_data["curah_hujan_mm"]), axis=-1),
-                                hovertemplate=(
-                                    "<b>" + k + "</b> (%{customdata[0]})<br>"
-                                    "Harga: Rp %{x:,.0f}<br>"
-                                    "Volume: %{y:,.1f}<br>"
-                                    "Hujan: %{customdata[1]:.1f} mm<extra></extra>"
-                                ),
-                                name=k,
-                                showlegend=False
-                            ),
-                            row=1, col=idx
-                        )
-                        if len(sub_data) > 1:
-                            z = np.polyfit(sub_data["harga_satuan_transaksi"], sub_data["volume_permintaan"], 1)
-                            p = np.poly1d(z)
-                            x_min = sub_data["harga_satuan_transaksi"].min()
-                            x_max = sub_data["harga_satuan_transaksi"].max()
-                            x_line = np.linspace(x_min, x_max, 40)
-                            fig_sub.add_trace(
-                                go.Scatter(
-                                    x=x_line, y=p(x_line),
-                                    mode="lines",
-                                    line=dict(color="#1a1a1a", width=2.5, dash="dot"),
-                                    name=f"Tren {k}",
-                                    showlegend=False,
-                                    hoverinfo="skip"
-                                ),
-                                row=1, col=idx
-                            )
-                        fig_sub.update_xaxes(
-                            title_text="Harga (Rp)", row=1, col=idx,
-                            showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
-                            tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
-                        )
-                        fig_sub.update_yaxes(
-                            title_text="Volume Pesanan" if idx == 1 else "", row=1, col=idx,
-                            showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
-                            tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
-                        )
+            fig_scatter = generate_cached_scatter_figure(filtered_df, chart_view, sel_fokus)
+            if fig_scatter is not None:
+                st.plotly_chart(fig_scatter, use_container_width=True, config={"displayModeBar": False})
 
-                    fig_sub.update_annotations(font_size=11)
-                    fig_sub.update_layout(
-                        height=400,
-                        plot_bgcolor="#FAFAFA",
-                        paper_bgcolor="#FFFFFF",
-                        margin=dict(l=40, r=20, t=40, b=45),
-                        font=dict(family="Space Grotesk, sans-serif", size=12, color="#1a1a1a"),
-                        hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
-                    )
-                    st.plotly_chart(fig_sub, use_container_width=True, config={"displayModeBar": False})
-
-                elif sel_fokus:
-                    clean_k = sel_fokus
-                    sub_data = filtered_df[filtered_df["nama_komoditas"] == clean_k]
-                    if not sub_data.empty:
-                        fig_single = px.scatter(
-                            sub_data, x="harga_satuan_transaksi", y="volume_permintaan",
-                            color="fase_musim", color_discrete_map=NB_MUSIM,
-                            marginal_x="box", marginal_y="box",
-                            hover_data={
-                                "harga_satuan_transaksi": ":.0f",
-                                "volume_permintaan": ":.1f",
-                                "curah_hujan_mm": ":.1f"
-                            }
-                        )
-                        fig_single.update_traces(
-                            marker=dict(size=9, line=dict(width=1.5, color="#1a1a1a"), opacity=0.8)
-                        )
-                        if len(sub_data) > 1:
-                            z = np.polyfit(sub_data["harga_satuan_transaksi"], sub_data["volume_permintaan"], 1)
-                            p = np.poly1d(z)
-                            x_line = np.linspace(sub_data["harga_satuan_transaksi"].min(), sub_data["harga_satuan_transaksi"].max(), 50)
-                            fig_single.add_scatter(
-                                x=x_line, y=p(x_line),
-                                mode="lines",
-                                line=dict(color="#1a1a1a", width=3, dash="dash"),
-                                name="Garis Tren",
-                                hoverinfo="skip"
-                            )
-                        nb_layout(fig_single, f"Distribusi Transaksi & Sensitivitas Harga: {clean_k}", x_title="", y_title="")
-                        fig_single.update_layout(
-                            xaxis_title="Harga Satuan (Rp)",
-                            yaxis_title="Volume Pesanan",
-                            height=480,
-                            margin=dict(t=80, b=80),
-                            legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5)
-                        )
-                        st.plotly_chart(fig_single, use_container_width=True, config={"displayModeBar": False})
-                        
-                        # Mini metrics badge
-                        corr_val = sub_data["harga_satuan_transaksi"].corr(sub_data["volume_permintaan"])
-                        st.markdown(f"""
-                        <div style="display:flex; gap:10px; justify-content:center; font-size:0.85rem; font-weight:600; color:#1a1a1a; margin-top:-5px;">
-                            <span class="neo-card" style="padding:4px 12px; margin:0;">Rata-rata Harga: <b>Rp {sub_data['harga_satuan_transaksi'].mean():,.0f}</b></span>
-                            <span class="neo-card" style="padding:4px 12px; margin:0;">Rata-rata Pesanan: <b>{sub_data['volume_permintaan'].mean():,.1f}</b></span>
-                            <span class="neo-card" style="padding:4px 12px; margin:0;">Koefisien Korelasi (r): <b>{corr_val:.3f}</b></span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.info(f"Tidak ada data untuk {clean_k}.")
-
-            elif chart_view == "Dinamika Bulanan (Dual-Axis)":
-                monthly = (
-                    filtered_df
-                    .groupby(pd.Grouper(key="tanggal_permintaan", freq="MS"))
-                    .agg(vol=("volume_permintaan", "sum"), harga=("harga_satuan_transaksi", "mean"))
-                    .reset_index()
-                )
-                fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
-                fig_dual.add_trace(
-                    go.Bar(
-                        x=monthly["tanggal_permintaan"], y=monthly["vol"],
-                        name="Total Volume Penyaluran",
-                        marker_color="#FFD600", marker_line_color="#1a1a1a", marker_line_width=2,
-                        hovertemplate="<b>%{x|%b %Y}</b><br>Volume: %{y:,.1f}<extra></extra>"
-                    ),
-                    secondary_y=False
-                )
-                fig_dual.add_trace(
-                    go.Scatter(
-                        x=monthly["tanggal_permintaan"], y=monthly["harga"],
-                        name="Rata-rata Harga (Rp)",
-                        mode="lines+markers",
-                        line=dict(color="#FF6B9D", width=3.5),
-                        marker=dict(size=9, color="#FF6B9D", line=dict(width=2, color="#1a1a1a")),
-                        hovertemplate="<b>%{x|%b %Y}</b><br>Harga: Rp %{y:,.0f}<extra></extra>"
-                    ),
-                    secondary_y=True
-                )
-                fig_dual.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
-                fig_dual.update_yaxes(title_text="Total Volume Penyaluran", showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, secondary_y=False, tickfont=dict(color="#1a1a1a"))
-                fig_dual.update_yaxes(title_text="Rata-rata Harga Satuan (Rp)", showgrid=False, linecolor="#1a1a1a", linewidth=2, secondary_y=True, tickfont=dict(color="#1a1a1a"))
-                fig_dual.update_layout(
-                    title=dict(text="<b>Dinamika Fluktuasi: Permintaan vs Harga Bulanan</b>", font=dict(family="Space Grotesk, sans-serif", size=16, color="#1a1a1a")),
-                    height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
-                    legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5, bgcolor="#FFFFFF", bordercolor="#1a1a1a", borderwidth=2, font=dict(color="#1a1a1a")),
-                    margin=dict(l=45, r=45, t=65, b=45),
-                    hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
-                )
-                st.plotly_chart(fig_dual, use_container_width=True, config={"displayModeBar": False})
-
-            elif chart_view == "Rentang Variasi (Boxplot)":
-                avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
-                fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>Sebaran Variasi Harga Transaksi (Rp)</b>", "<b>Sebaran Volume Permintaan</b>"], horizontal_spacing=0.1)
-                for komod in avail_komod:
-                    sub = filtered_df[filtered_df["nama_komoditas"] == komod]
-                    short_komod = komod.replace("Agen Hayati (Trichogem / Methagem)", "Agen Hayati").replace("Pendawa Subur POC", "Pendawa POC")
-                    fig_box.add_trace(
-                        go.Box(
-                            y=sub["harga_satuan_transaksi"], name=short_komod,
-                            marker_color=NB_KOMOD.get(komod, "#FFD600"),
-                            line=dict(color="#1a1a1a", width=2),
-                            boxpoints="outliers"
-                        ),
-                        row=1, col=1
-                    )
-                    fig_box.add_trace(
-                        go.Box(
-                            y=sub["volume_permintaan"], name=short_komod,
-                            marker_color=NB_KOMOD.get(komod, "#FFD600"),
-                            line=dict(color="#1a1a1a", width=2),
-                            boxpoints="outliers",
-                            showlegend=False
-                        ),
-                        row=1, col=2
-                    )
-                fig_box.update_xaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
-                fig_box.update_yaxes(showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2, tickfont=dict(color="#1a1a1a"))
-                fig_box.update_layout(
-                    showlegend=False,
-                    height=450, plot_bgcolor="#FAFAFA", paper_bgcolor="#FFFFFF",
-                    margin=dict(l=45, r=25, t=65, b=45),
-                    hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
-                )
-                st.plotly_chart(fig_box, use_container_width=True, config={"displayModeBar": False})
+            # Mini metrics badge for single SKU focus
+            if chart_view == "Sebaran & Korelasi" and sel_fokus and sel_fokus != "Bandingkan Semua Komoditas":
+                sub_data = filtered_df[filtered_df["nama_komoditas"] == sel_fokus]
+                if not sub_data.empty and len(sub_data) > 1:
+                    corr_val = sub_data["harga_satuan_transaksi"].corr(sub_data["volume_permintaan"])
+                    st.markdown(f"""
+                    <div style="display:flex; gap:10px; justify-content:center; font-size:0.85rem; font-weight:600; color:#1a1a1a; margin-top:-5px;">
+                        <span class="neo-card" style="padding:4px 12px; margin:0;">Rata-rata Harga: <b>Rp {sub_data['harga_satuan_transaksi'].mean():,.0f}</b></span>
+                        <span class="neo-card" style="padding:4px 12px; margin:0;">Rata-rata Pesanan: <b>{sub_data['volume_permintaan'].mean():,.1f}</b></span>
+                        <span class="neo-card" style="padding:4px 12px; margin:0;">Koefisien Korelasi (r): <b>{corr_val:.3f}</b></span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         # --- Data table ---
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1679,6 +1748,7 @@ with tab4:
             <b style="font-size:1.1rem;">Data transaksi tidak ditemukan. Pastikan minimal satu komoditas tercentang pada panel kontrol sebelah kiri.</b>
         </div>
         """, unsafe_allow_html=True)
+t_tab4_dur = (time.perf_counter() - t_tab4_start) * 1000
 
 # ============================================================
 # TAB 5 — PANDUAN DOSIS & SOP APLIKASI PRODUK MITRA
@@ -1704,3 +1774,7 @@ with tab5:
         use_container_width=True,
         hide_index=True,
     )
+
+t_rerun_end = time.perf_counter()
+print(f"[PERF LOG] Script execution latency: {(t_rerun_end - t_rerun_start)*1000:.1f}ms | Pred: {t_pred_dur:.1f}ms | Tab1: {t_tab1_dur:.1f}ms | Tab2: {t_tab2_dur:.1f}ms | Tab3: {t_tab3_dur:.1f}ms | Tab4: {t_tab4_dur:.1f}ms (simulasi_harga={simulasi_harga})", flush=True)
+
