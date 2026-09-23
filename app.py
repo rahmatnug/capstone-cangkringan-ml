@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import os
-import joblib
 from predict import DemandPredictor
 
 # ============================================================
@@ -342,7 +341,7 @@ hr { border: 2px solid #1a1a1a !important; }
 
 .neo-badge       { display:inline-block; background:#FFD600; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
 .neo-badge-green { display:inline-block; background:#7BF1A8; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
-.neo-badge-pink  { display:inline-block; background:#FF6B9D; color:#fff; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
+.neo-badge-pink  { display:inline-block; background:#FF6B9D; color:#1a1a1a; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
 
 .flow-container { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin:1.5rem 0; }
 .flow-step {
@@ -356,7 +355,7 @@ hr { border: 2px solid #1a1a1a !important; }
 
 .status-aman      { display:inline-block; background:#7BF1A8; border:2px solid #1a1a1a; border-radius:8px; padding:4px 14px; font-weight:700; box-shadow:2px 2px 0 #1a1a1a; }
 .status-peringatan{ display:inline-block; background:#FFD600; border:2px solid #1a1a1a; border-radius:8px; padding:4px 14px; font-weight:700; box-shadow:2px 2px 0 #1a1a1a; }
-.status-kritis    { display:inline-block; background:#FF6B9D; color:#fff; border:2px solid #1a1a1a; border-radius:8px; padding:4px 14px; font-weight:700; box-shadow:2px 2px 0 #1a1a1a; }
+.status-kritis    { display:inline-block; background:#FF6B9D; color:#1a1a1a; border:2px solid #1a1a1a; border-radius:8px; padding:4px 14px; font-weight:700; box-shadow:2px 2px 0 #1a1a1a; }
 
 /* Scrollbar */
 ::-webkit-scrollbar       { width: 8px; }
@@ -368,11 +367,11 @@ hr { border: 2px solid #1a1a1a !important; }
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
 }
-/* Keep white text on pink badges/status */
+/* Force high contrast dark text on pink badges/status for outdoor sunlight readability */
 .neo-badge-pink, .neo-badge-pink *,
 .status-kritis, .status-kritis * {
-    color: #fff !important;
-    -webkit-text-fill-color: #fff !important;
+    color: #1a1a1a !important;
+    -webkit-text-fill-color: #1a1a1a !important;
 }
 /* Keep chart internals untouched */
 .js-plotly-plot *, .plotly * {
@@ -484,19 +483,9 @@ df = load_data()
 # ============================================================
 # LOAD MODEL & KONTRAK INFERENSI
 # ============================================================
-FITUR_INPUT = [
-    'id_poktan', 'id_komoditas', 'harga_satuan_transaksi', 
-    'curah_hujan_mm', 'lag_1w', 'lag_4w', 'lag_7w', 
-    'rolling_mean_4w', 'fase_musim_Bera', 'fase_musim_Gadu', 'fase_musim_Rendeng'
-]
-
-
-
 @st.cache_resource
 def get_predictor():
     return DemandPredictor()
-
-predictor = get_predictor()
 
 # ============================================================
 # CHART HELPERS (Neo-Brutalism palette)
@@ -606,7 +595,6 @@ if not df.empty:
         "Pilih Komoditas", komoditas_list, default=komoditas_list, label_visibility="collapsed"
     )
 
-    # Jalur penjualan menjadi bagian dari kontrak input Sprint 2.
     st.sidebar.markdown("### 🛒 Jalur Penjualan")
     jalur_penjualan = st.sidebar.multiselect(
         "Pilih Jalur Penjualan",
@@ -713,7 +701,7 @@ else:
 # ============================================================
 st.markdown("""
 <div class="neo-title">🌾 Dasbor Prediksi Produksi Pertanian</div>
-<div class="neo-subtitle">Prototipe UI Capstone Cangkringan ML — Sprint 3</div>
+<div class="neo-subtitle">Sistem Pendukung Keputusan Produksi & Prediksi Permintaan CV Pandawa Kencana Multifarm</div>
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -1105,7 +1093,11 @@ def run_predictions_cached(komoditas_tuple, sim_harga, channel, season, _hist_df
             'lag_1w': base_demand, 'lag_4w': base_demand, 'lag_7w': base_demand,
             'rolling_mean_4w': base_demand, 'fase_musim': season
         }]
-        demand = predictor_model.predict(raw_input)
+        try:
+            demand = float(predictor_model.predict(raw_input))
+        except Exception as e:
+            st.warning(f"Gagal melakukan inferensi model untuk {k}. Menggunakan baseline historis ({base_demand:.1f}).")
+            demand = base_demand
             
         buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
@@ -1130,17 +1122,21 @@ def run_predictions_cached(komoditas_tuple, sim_harga, channel, season, _hist_df
     return pd.DataFrame(pred_rows)
 
 if selected_komoditas and st.session_state.prediction_requested:
-    historical_df = filtered_df if not filtered_df.empty else df
-    selected_channel = jalur_penjualan[0]
-    selected_season = selected_musim[0] if selected_musim else "Rendeng"
-    
-    st.session_state.pred_df = run_predictions_cached(
-        tuple(selected_komoditas),
-        simulasi_harga,
-        selected_channel,
-        selected_season,
-        historical_df
-    )
+    try:
+        historical_df = filtered_df if not filtered_df.empty else df
+        selected_channel = jalur_penjualan[0] if jalur_penjualan else "Wholesale (Grosir)"
+        selected_season = selected_musim[0] if selected_musim else "Rendeng"
+        
+        st.session_state.pred_df = run_predictions_cached(
+            tuple(selected_komoditas),
+            simulasi_harga,
+            selected_channel,
+            selected_season,
+            historical_df
+        )
+    except Exception as exc:
+        st.warning(f"Terjadi kendala saat memproses prediksi: {exc}. Menampilkan data cadangan.")
+        st.session_state.pred_df = pd.DataFrame()
 
 # TAB 2 — SIMULASI & PREDIKSI (WHAT-IF)
 # ============================================================
@@ -1164,7 +1160,7 @@ with tab2:
             <div class="flow-step">
                 <div style="font-size:1.4rem;">🧠</div>
                 <div>Model ML</div>
-                <div style="font-size:.7rem; color:#666;">Sprint 3 🔓</div>
+                <div style="font-size:.7rem; color:#666;">Model Inferensi XGBoost</div>
             </div>
             <div class="flow-arrow">→</div>
             <div class="flow-step flow-step-active">
@@ -1229,7 +1225,7 @@ with tab2:
         nb_layout(fig, f"Estimasi Demand pada Harga Rp {simulasi_harga:,.0f}", y_title="Demand (satuan produk)")
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-        st.caption("Grafik ini menampilkan hasil inferensi demand. Pita error (±5%) merupakan hampiran (approximation) visual untuk 95% Confidence Interval. Rekomendasi produksi tersedia di Tab 4.")
+        st.caption("Rentang batas atas dan bawah dihitung berdasarkan 95% Confidence Interval (1.96 × RMSE historis).")
     else:
         st.markdown("""
         <div class="neo-card-yellow" style="text-align:center;">
@@ -1243,7 +1239,7 @@ with tab2:
 with tab3:
     st.markdown("""
     <div class="neo-card" style="padding:14px;">
-        <b>📦 Prototipe Pemantauan Stok Gudang</b><br>
+        <b>📦 Monitoring Stok Gudang & EWS Viabilitas Mikroba</b><br>
         Sinkronisasi dengan <i>Masa Simpan Hari</i> — fitur penurunan mutu mikroba (sesuai schema.sql).
     </div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)

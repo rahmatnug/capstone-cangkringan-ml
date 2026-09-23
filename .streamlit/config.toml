@@ -1,6 +1,19 @@
 [theme]
 base = "light"
-primaryColor = "#FF4B4B"
+primaryColor = "#FFD600"
 backgroundColor = "#FFF8E7"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#1a1a1a"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 50
+port = 8501
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
