@@ -192,7 +192,7 @@ button[kind="headerNoPadding"] span,
     color: #1a1a1a !important;
 }
 
-/* --- Sidebar: Slider Styling & High-Visibility Track Rail --- */
+/* --- Sidebar: Slider Styling & High-Visibility Physical Track --- */
 [data-testid="stSlider"] {
     padding: 0 2px !important;
 }
@@ -203,49 +203,35 @@ button[kind="headerNoPadding"] span,
     color: #1a1a1a !important;
 }
 
-/* Slider Track Rail - High Contrast Black Border & Fill */
-[data-testid="stSlider"] [data-baseweb="slider"] > div > div,
-[data-testid="stSlider"] div[data-rac="SliderTrack"],
-[data-testid="stSlider"] div[role="presentation"],
-[data-testid="stSlider"] div[data-rac][data-orientation="horizontal"] > div:first-child,
-[data-testid="stSlider"] [class*="efbyxod5"],
-[data-testid="stSlider"] .st-emotion-cache-1ijtkbd {
+/* High-Visibility Physical Slider Track */
+[data-testid="stSlider"] div[data-baseweb="slider"] {
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+}
+[data-testid="stSlider"] div[data-baseweb="slider"] > div > div {
     background-color: #ffffff !important;
     border: 2px solid #1a1a1a !important;
-    height: 10px !important;
+    height: 12px !important;
     border-radius: 6px !important;
 }
-
-/* Slider Active Track (Filled portion) */
-[data-testid="stSlider"] [data-baseweb="slider"] > div > div > div,
-[data-testid="stSlider"] div[data-rac="SliderTrack"] > div {
+/* Active Track (Left of Thumb) */
+[data-testid="stSlider"] div[data-baseweb="slider"] > div > div > div {
     background-color: #1a1a1a !important;
-    height: 10px !important;
+    height: 12px !important;
 }
-
-/* Slider Thumb Knob - Big, tactile 24px knob */
-[data-testid="stSlider"] [role="slider"],
-[data-testid="stSlider"] div[data-rac][style*="position: absolute"],
-[data-testid="stSlider"] .st-emotion-cache-r084rb,
-[data-testid="stSlider"] [class*="efbyxod3"] {
-    background-color: #1a1a1a !important;
-    border: 3px solid #ffffff !important;
+/* Big Tactile Thumb Knob */
+[data-testid="stSlider"] [role="slider"] {
+    background-color: #FFD600 !important;
+    border: 3px solid #1a1a1a !important;
     box-shadow: 2px 2px 0px #1a1a1a !important;
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 50% !important;
+    width: 26px !important;
+    height: 26px !important;
+    top: -7px !important;
     cursor: grab !important;
 }
-[data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
-    top: -7px !important;
-}
-
-/* Slider Thumb Value — Display with neo-brutalism styling */
+/* Hide redundant raw float text above knob without breaking the slider */
 [data-testid="stSliderThumbValue"] {
-    color: #1a1a1a !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+    display: none !important;
 }
 
 /* Slider Tick Bar — Show min/max anchor labels for operational context */
@@ -1313,11 +1299,12 @@ if not df.empty:
     p_min, p_max, p_default = HARGA_ACUAN_MITRA.get(sku_ref, (10000, 100000, 30000))
 
     simulasi_harga = st.sidebar.slider(
-        f"Harga Satuan Acuan — {sku_ref}",
+        label="Geser untuk Mengubah Harga Satuan Acuan",
         min_value=p_min,
         max_value=p_max,
         value=p_default,
         step=1000,
+        label_visibility="visible",
         help=f"Geser ke kiri = harga grosir untuk Poktan. Geser ke kanan = harga eceran marketplace. Berlaku untuk: {sku_ref}.",
     )
 
