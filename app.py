@@ -1475,21 +1475,25 @@ with tab1:
 
                     with cols[j]:
                         st.markdown(f"""
-                        <div class="{card}" style="text-align:center;">
-                            <div style="font-size:2.2rem;">{ico}</div>
-                            <div style="font-weight:700; font-size:1.25rem; margin:6px 0;">{k}</div>
-                            <div class="{cls}">{emoji} {status}</div>
-                            <div style="margin-top:14px;">
-                                <div style="font-size:.78rem; color:#333;">Stok Aktual</div>
-                                <div style="font-weight:700; font-size:1.7rem;">{d['stok']} {unit}</div>
+                        <div class="{card}" style="text-align:center; min-height:360px; display:flex; flex-direction:column; justify-content:space-between; padding:18px 14px;">
+                            <div>
+                                <div style="font-size:2.2rem;">{ico}</div>
+                                <div style="font-weight:700; font-size:1.25rem; margin:6px 0;">{k}</div>
+                                <div class="{cls}">{emoji} {status}</div>
                             </div>
-                            <div style="margin-top:6px;">
-                                <div style="font-size:.78rem; color:#333;">Batas Minimum Gudang</div>
-                                <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} {unit}</div>
-                            </div>
-                            <div style="margin-top:6px;">
-                                <div style="font-size:.78rem; color:#333;">Sisa Masa Efektif Hayati</div>
-                                <div style="font-weight:700; font-size:1.15rem;">{d['sisa_hari']} hari</div>
+                            <div>
+                                <div style="margin-top:10px;">
+                                    <div style="font-size:.78rem; color:#333;">Stok Aktual</div>
+                                    <div style="font-weight:700; font-size:1.7rem;">{d['stok']} {unit}</div>
+                                </div>
+                                <div style="margin-top:6px;">
+                                    <div style="font-size:.78rem; color:#333;">Batas Minimum Gudang</div>
+                                    <div style="font-weight:700; font-size:1.15rem;">{d['threshold']} {unit}</div>
+                                </div>
+                                <div style="margin-top:6px;">
+                                    <div style="font-size:.78rem; color:#333;">Sisa Masa Efektif Hayati</div>
+                                    <div style="font-weight:700; font-size:1.15rem;">{d['sisa_hari']} hari</div>
+                                </div>
                             </div>
                         </div>""", unsafe_allow_html=True)
 
@@ -1565,53 +1569,25 @@ t_tab2_dur = (time.perf_counter() - t_tab2_start) * 1000
 # ============================================================
 t_tab3_start = time.perf_counter()
 with tab3:
-    # --- Flow diagram ---
+    # --- Flow diagram (responsive 2x2 grid) ---
     st.markdown("""
-    <style>
-    .flow-container {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        gap: 12px;
-        align-items: center;
-        padding-bottom: 8px;
-    }
-    .flow-step {
-        background: #FFF8E7;
-        border: 2px solid #1a1a1a;
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        white-space: nowrap;
-        box-shadow: 2px 2px 0px #1a1a1a;
-    }
-    .flow-arrow {
-        font-weight: 900;
-        font-size: 1.1rem;
-        color: #1a1a1a;
-    }
-    </style>
-    <div class="neo-card" style="margin-bottom:1.5rem;">
-        <div class="flow-container">
-            <div class="flow-step flow-step-active">
-                <div style="font-weight:700; font-size:1.05rem; margin-bottom:4px;">1. Parameter Operasional</div>
-                <div style="font-size:.75rem; color:#444;">Harga Acuan · Musim Tanam · Kanal</div>
+    <div class="neo-card" style="margin-bottom:1.5rem; padding:18px 14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="font-weight:700; font-size:.95rem;">1. Parameter Operasional</div>
+                <div style="font-size:.72rem; color:#444;">Harga · Musim · Kanal</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">
-                <div style="font-weight:700; font-size:1.05rem; margin-bottom:4px;">2. Validasi Data Pabrik</div>
-                <div style="font-size:.75rem; color:#444;">Sinkronisasi Transaksi & BMKG</div>
+            <div style="background:#FFF8E7; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="font-weight:700; font-size:.95rem;">2. Validasi Data Pabrik</div>
+                <div style="font-size:.72rem; color:#444;">Sinkronisasi Transaksi & BMKG</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">
-                <div style="font-weight:700; font-size:1.05rem; margin-bottom:4px;">3. Kalkulasi Estimasi Permintaan</div>
-                <div style="font-size:.75rem; color:#444;">Proyeksi Kebutuhan Lapangan</div>
+            <div style="background:#FFF8E7; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="font-weight:700; font-size:.95rem;">3. Estimasi Permintaan</div>
+                <div style="font-size:.72rem; color:#444;">Proyeksi Kebutuhan Lapangan</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step flow-step-active">
-                <div style="font-weight:700; font-size:1.05rem; margin-bottom:4px;">4. Alokasi Batch Produksi</div>
-                <div style="font-size:.75rem; color:#444;">Output Drum / Jeriken / Zak</div>
+            <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="font-weight:700; font-size:.95rem;">4. Alokasi Batch</div>
+                <div style="font-size:.72rem; color:#444;">Output Drum / Jeriken / Zak</div>
             </div>
         </div>
     </div>
