@@ -108,14 +108,18 @@ button[kind="headerNoPadding"] span,
     background: #FFFFFF !important;
     color: #1a1a1a !important;
 }
+[data-testid="stSidebar"] [data-tag],
+[data-testid="stSidebar"] [data-testid="stMultiSelectTagsContainer"] span,
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] {
     background-color: #FFFFFF !important;
     color: #1a1a1a !important;
     border: 2px solid #1a1a1a !important;
-    border-radius: 8px !important;
-    box-shadow: 2px 2px 0px #1a1a1a !important;
+    border-radius: 6px !important;
     font-weight: 700 !important;
+    box-shadow: 2px 2px 0px #1a1a1a !important;
 }
+[data-testid="stSidebar"] [data-tag] span,
+[data-testid="stSidebar"] [data-testid="stMultiSelectTagsContainer"] span span,
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] span {
     color: #1a1a1a !important;
 }
@@ -194,6 +198,15 @@ button[kind="headerNoPadding"] span,
 }
 
 /* --- Sidebar: Slider Styling & High-Visibility Physical Track --- */
+[data-testid="stSidebar"] input[type="range"] {
+    accent-color: #FFD600 !important;
+}
+[data-testid="stSidebar"] [data-testid="stSlider"] div[data-rac] {
+    background-color: #FFFFFF !important;
+    border: 2px solid #1a1a1a !important;
+    height: 10px !important;
+    border-radius: 5px !important;
+}
 [data-testid="stSlider"] {
     padding: 0 2px !important;
 }
@@ -481,11 +494,11 @@ hr { border: 2px solid #1a1a1a !important; }
 .neo-badge-green { display:inline-block; background:#7BF1A8; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
 .neo-badge-pink  { display:inline-block; background:#FF6B9D; color:#1a1a1a; border:2px solid #1a1a1a; border-radius:8px; padding:4px 12px; font-weight:600; font-size:.85rem; box-shadow:2px 2px 0 #1a1a1a; margin-right:6px; }
 
-.flow-container { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin:1.2rem 0; }
+.flow-container { display:flex; align-items:center; justify-content:flex-start; gap:12px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:8px; margin:1.2rem 0; }
 .flow-step {
     background:#fff; border:3px solid #1a1a1a; border-radius:14px;
     padding:14px 18px; box-shadow:4px 4px 0 #1a1a1a; text-align:center;
-    font-weight:600; min-width:140px; transition:transform .15s;
+    font-weight:600; min-width:140px; white-space:nowrap; transition:transform .15s;
 }
 .flow-step:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 #1a1a1a; }
 .flow-step-active { background:#FFD600; }
@@ -1554,6 +1567,31 @@ t_tab3_start = time.perf_counter()
 with tab3:
     # --- Flow diagram ---
     st.markdown("""
+    <style>
+    .flow-container {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 12px;
+        align-items: center;
+        padding-bottom: 8px;
+    }
+    .flow-step {
+        background: #FFF8E7;
+        border: 2px solid #1a1a1a;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        box-shadow: 2px 2px 0px #1a1a1a;
+    }
+    .flow-arrow {
+        font-weight: 900;
+        font-size: 1.1rem;
+        color: #1a1a1a;
+    }
+    </style>
     <div class="neo-card" style="margin-bottom:1.5rem;">
         <div class="flow-container">
             <div class="flow-step flow-step-active">
