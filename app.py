@@ -109,11 +109,12 @@ button[kind="headerNoPadding"] span,
     color: #1a1a1a !important;
 }
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] {
-    background-color: #FFD600 !important;
+    background-color: #FFFFFF !important;
     color: #1a1a1a !important;
     border: 2px solid #1a1a1a !important;
     border-radius: 8px !important;
-    font-weight: 600 !important;
+    box-shadow: 2px 2px 0px #1a1a1a !important;
+    font-weight: 700 !important;
 }
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] span {
     color: #1a1a1a !important;
@@ -840,9 +841,9 @@ def render_dss_production_cards(pred_df):
                                 {rekom_val:,.1f} <span style="font-size:0.9rem;">{unit_str}</span>
                             </div>
                         </div>
-                        <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:8px; padding:6px 8px;">
-                            <div style="font-size:0.7rem; font-weight:700; color:#1a1a1a;">WADAH & KEMASAN FISIK:</div>
-                            <div style="font-size:0.85rem; font-weight:700; color:#1a1a1a;">{batch_text}</div>
+                        <div style="background:{'#FFD600' if rekom_val > 0 else '#E8F5E9'}; border:2px solid #1a1a1a; border-radius:8px; padding:6px 8px;">
+                            <div style="font-size:0.7rem; font-weight:700; color:{'#1a1a1a' if rekom_val > 0 else '#2E7D32'};">WADAH & KEMASAN FISIK:</div>
+                            <div style="font-size:0.85rem; font-weight:700; color:{'#1a1a1a' if rekom_val > 0 else '#2E7D32'};">{batch_text}</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -878,7 +879,13 @@ def run_predictions_cached(komoditas_tuple, sim_harga, channel, season, _hist_df
             demand = float(predictor_model.predict(raw_input))
         except Exception:
             demand = base_demand
-            
+
+        # Price elasticity adjustment (compensates for model scaling mismatch)
+        price_ref = 30000
+        elasticity_coeff = -0.4  # negative = demand drops when price rises
+        elasticity_factor = 1.0 + elasticity_coeff * ((sim_harga - price_ref) / 10000)
+        demand = max(5.0, round(demand * elasticity_factor, 1))
+
         buf = round(demand * 0.15, 1)
         stok_aktif = STOK_MOCK.get(k, STOK_DEFAULT)["stok"]
         rekomendasi = max(0.0, round(demand - stok_aktif + buf, 1))
@@ -1575,19 +1582,19 @@ with tab3:
     # --- Parameter cards ---
     p1, p2, p3 = st.columns(3)
     p1.markdown(f"""
-    <div class="neo-card-yellow" style="text-align:center;">
+    <div class="neo-card-yellow" style="text-align:center; min-height:110px; display:flex; flex-direction:column; justify-content:center; padding:14px 18px;">
         <div style="font-weight:700; font-size:.85rem; color:#555;">Harga Satuan Acuan</div>
         <div style="font-weight:700; font-size:1.4rem; color:#1a1a1a;">Rp {simulasi_harga:,.0f}</div>
     </div>""", unsafe_allow_html=True)
     p2.markdown(f"""
-    <div class="neo-card-green" style="text-align:center;">
+    <div class="neo-card-green" style="text-align:center; min-height:110px; display:flex; flex-direction:column; justify-content:center; padding:14px 18px;">
         <div style="font-weight:700; font-size:.85rem; color:#555;">Kalender Musim Aktif</div>
         <div style="font-weight:700; font-size:1.05rem; color:#1a1a1a;">{', '.join(selected_musim) or 'Belum Dipilih'}</div>
     </div>""", unsafe_allow_html=True)
     p3.markdown(f"""
-    <div class="neo-card-blue" style="text-align:center;">
+    <div class="neo-card-blue" style="text-align:center; min-height:110px; display:flex; flex-direction:column; justify-content:center; padding:14px 18px;">
         <div style="font-weight:700; font-size:.85rem; color:#555;">Komoditas dalam Analisis</div>
-        <div style="font-weight:700; font-size:1.05rem; color:#1a1a1a;">{', '.join(selected_komoditas) or 'Belum Dipilih'}</div>
+        <div style="font-weight:700; font-size:1.05rem; color:#1a1a1a;">{len(selected_komoditas)} Produk Aktif</div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1756,11 +1763,27 @@ with tab5:
         ["Compossap (Pupuk Organik Padat)", "Zak (50 Kg)", "Tanaman Padi: 1 - 2 Ton/Ha sebelum tanam. Tanaman Cabai: 4 - 5 Ons/lubang tanam. Jeruk/Kopi/Sawit: 5 Kg/pohon (aplikasi tiap 6 bulan)."],
         ["Agen Hayati (Trichogem & Methagem)", "Saset / Kg", "Larutkan 100 gram per tangki semprot untuk pencegahan jamur Fusarium, Phytophthora, dan wereng coklat pada tanaman cabai/padi."]
     ]
-    st.dataframe(
-        pd.DataFrame(dosis_rows, columns=["Produk", "Satuan Resmi", "Panduan Pemakaian Lapangan"]),
-        use_container_width=True,
-        hide_index=True,
-    )
+    # Neo-Brutalism responsive 2-column card grid
+    sop_colors = ["#FFD600", "#A8E6CF", "#90CAF9", "#FFAB91", "#CE93D8", "#80DEEA"]
+    for i in range(0, len(dosis_rows), 2):
+        sop_c1, sop_c2 = st.columns(2)
+        for col_idx, sop_col in enumerate([sop_c1, sop_c2]):
+            row_idx = i + col_idx
+            if row_idx < len(dosis_rows):
+                nama_produk, satuan, panduan = dosis_rows[row_idx]
+                accent = sop_colors[row_idx % len(sop_colors)]
+                sop_col.markdown(f"""
+                <div style="border:3px solid #1a1a1a; border-radius:16px; padding:18px 20px; margin-bottom:16px;
+                            box-shadow:4px 4px 0px #1a1a1a; background:#FFFFFF; min-height:200px;">
+                    <div style="font-weight:800; font-size:1.1rem; color:#1a1a1a; margin-bottom:8px;">{nama_produk}</div>
+                    <div style="display:inline-block; background:{accent}; border:2px solid #1a1a1a; border-radius:8px;
+                                padding:3px 12px; font-weight:700; font-size:0.8rem; color:#1a1a1a; margin-bottom:12px;">
+                        📏 {satuan}
+                    </div>
+                    <hr style="border:none; border-top:2px solid #1a1a1a; margin:10px 0;">
+                    <div style="font-size:0.9rem; color:#333; line-height:1.6;">{panduan}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 t_rerun_end = time.perf_counter()
 print(f"[PERF LOG] Script execution latency: {(t_rerun_end - t_rerun_start)*1000:.1f}ms | Pred: {t_pred_dur:.1f}ms | Tab1: {t_tab1_dur:.1f}ms | Tab2: {t_tab2_dur:.1f}ms | Tab3: {t_tab3_dur:.1f}ms | Tab4: {t_tab4_dur:.1f}ms (simulasi_harga={simulasi_harga})", flush=True)
