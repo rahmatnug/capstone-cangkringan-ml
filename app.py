@@ -1639,7 +1639,7 @@ with tab2:
     
     if not st.session_state.pred_df.empty:
         st.markdown("<br>", unsafe_allow_html=True)
-        summary_display = st.session_state.pred_df[["Komoditas", "Unit", "Jalur Penjualan", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]].copy()
+        summary_display = st.session_state.pred_df[["Komoditas", "Unit", "Prediksi Permintaan", "Safety Buffer", "Rekomendasi Produksi"]].copy()
         summary_display["Alokasi Wadah Pabrik"] = summary_display.apply(
             lambda r: format_batch_fisik(r["Komoditas"], r["Rekomendasi Produksi"]), axis=1
         )
@@ -1650,10 +1650,9 @@ with tab2:
             column_config={
                 "Komoditas": st.column_config.TextColumn("Komoditas", width="medium"),
                 "Unit": st.column_config.TextColumn("Satuan", width="small"),
-                "Jalur Penjualan": st.column_config.TextColumn("Kanal Distribusi", width="medium"),
-                "Prediksi Permintaan": st.column_config.NumberColumn("Prediksi Permintaan", format="%.1f"),
-                "Safety Buffer": st.column_config.NumberColumn("Safety Buffer (15%)", format="%.1f"),
-                "Rekomendasi Produksi": st.column_config.NumberColumn("Rekomendasi Produksi", format="%.1f"),
+                "Prediksi Permintaan": st.column_config.NumberColumn("Prediksi", format="%.1f", width="small"),
+                "Safety Buffer": st.column_config.NumberColumn("Buffer (15%)", format="%.1f", width="small"),
+                "Rekomendasi Produksi": st.column_config.NumberColumn("Target Produksi", format="%.1f", width="small"),
                 "Alokasi Wadah Pabrik": st.column_config.TextColumn("Alokasi Wadah Fisik Pabrik", width="large"),
             }
         )
@@ -1679,22 +1678,22 @@ with tab3:
     <div class="neo-card" style="margin-bottom:1.5rem; padding:18px 14px;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="display:inline-block; background:#1a1a1a; color:#FFD600; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 1</div>
+                <div style="display:inline-block; background:#FFFFFF; color:#1a1a1a; -webkit-text-fill-color:#1a1a1a; border:2px solid #1a1a1a; border-radius:6px; padding:2px 10px; font-size:.75rem; font-weight:800; margin-bottom:6px; box-shadow:1.5px 1.5px 0px #1a1a1a;">FASE 1</div>
                 <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Parameter Operasional</div>
                 <div style="font-size:.75rem; color:#333; font-weight:500;">Harga · Musim · Kanal</div>
             </div>
             <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="display:inline-block; background:#1a1a1a; color:#FFFFFF; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 2</div>
+                <div style="display:inline-block; background:#FFFFFF; color:#1a1a1a; -webkit-text-fill-color:#1a1a1a; border:2px solid #1a1a1a; border-radius:6px; padding:2px 10px; font-size:.75rem; font-weight:800; margin-bottom:6px; box-shadow:1.5px 1.5px 0px #1a1a1a;">FASE 2</div>
                 <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Validasi Data Pabrik</div>
                 <div style="font-size:.75rem; color:#333; font-weight:500;">Sinkronisasi Transaksi & BMKG</div>
             </div>
             <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="display:inline-block; background:#1a1a1a; color:#FFFFFF; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 3</div>
+                <div style="display:inline-block; background:#FFFFFF; color:#1a1a1a; -webkit-text-fill-color:#1a1a1a; border:2px solid #1a1a1a; border-radius:6px; padding:2px 10px; font-size:.75rem; font-weight:800; margin-bottom:6px; box-shadow:1.5px 1.5px 0px #1a1a1a;">FASE 3</div>
                 <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Estimasi Permintaan</div>
                 <div style="font-size:.75rem; color:#333; font-weight:500;">Proyeksi Kebutuhan Lapangan</div>
             </div>
             <div style="background:#7BF1A8; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="display:inline-block; background:#1a1a1a; color:#7BF1A8; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 4</div>
+                <div style="display:inline-block; background:#FFFFFF; color:#1a1a1a; -webkit-text-fill-color:#1a1a1a; border:2px solid #1a1a1a; border-radius:6px; padding:2px 10px; font-size:.75rem; font-weight:800; margin-bottom:6px; box-shadow:1.5px 1.5px 0px #1a1a1a;">FASE 4</div>
                 <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Alokasi Batch Pabrik</div>
                 <div style="font-size:.75rem; color:#333; font-weight:500;">Output Drum / Jeriken / Zak</div>
             </div>
@@ -1734,10 +1733,6 @@ with tab3:
         fig.add_trace(go.Bar(
             name="Prediksi Permintaan", x=st.session_state.pred_df["Komoditas"],
             y=st.session_state.pred_df["Prediksi Permintaan"],
-            text=st.session_state.pred_df["Prediksi Permintaan"].map(lambda value: f"<b>{value:.1f}</b>"),
-            textposition="inside",
-            insidetextanchor="top",
-            insidetextfont=dict(family="Space Grotesk, sans-serif", size=13, color="#1a1a1a"),
             marker_color=[NB_KOMOD.get(name, "#88D4FF") for name in st.session_state.pred_df["Komoditas"]],
             marker_line_color="#1a1a1a", marker_line_width=2,
             hovertemplate="<b>%{x}</b><br>Estimasi: %{y:.1f}<extra></extra>",
@@ -1751,9 +1746,26 @@ with tab3:
                 thickness=2
             ),
         ))
+        max_ub = float(st.session_state.pred_df["Upper Bound (95%)"].max()) if not st.session_state.pred_df.empty else 100.0
+        for _, r in st.session_state.pred_df.iterrows():
+            k_name = r["Komoditas"]
+            val = r["Prediksi Permintaan"]
+            ub = r["Upper Bound (95%)"]
+            fig.add_annotation(
+                x=k_name,
+                y=ub + (max_ub * 0.05),
+                text=f"<b>{val:.1f}</b>",
+                showarrow=False,
+                font=dict(family="Space Grotesk, sans-serif", size=12, color="#1a1a1a"),
+                bgcolor="#FFFFFF",
+                bordercolor="#1a1a1a",
+                borderwidth=1.5,
+                borderpad=3,
+            )
         nb_layout(fig, f"Proyeksi Penyerapan Pasar pada Harga Rp {simulasi_harga:,.0f}", y_title="Estimasi Kebutuhan (Satuan Resmi)")
         fig.update_layout(showlegend=False, height=440)
         fig.update_xaxes(tickangle=-15, tickfont=dict(family="Space Grotesk, sans-serif", size=11, color="#1a1a1a"))
+        fig.update_yaxes(range=[0, max_ub * 1.2])
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         st.caption("Rentang batas atas dan bawah (garis vertikal) menunjukkan batas toleransi fluktuasi pasar (±25 unit). Jika pesanan mendekati batas atas, siapkan kapasitas drum fermentasi cadangan.")
     else:
@@ -1810,36 +1822,37 @@ with tab4:
                 st.plotly_chart(fig_donut, use_container_width=True, config={"displayModeBar": False})
 
         with right2:
-            # Header & Mode Switcher (Aligned layout without clipping)
-            st.markdown('<div style="font-size:1.05rem; font-weight:700; color:#1a1a1a; margin-bottom:8px;">Evaluasi Harga vs Volume Pesanan</div>', unsafe_allow_html=True)
-            r_c1, r_c2 = st.columns([1.2, 1.1])
-            with r_c1:
-                chart_view = st.pills(
-                    "Mode Tampilan",
-                    options=["Sebaran & Korelasi", "Dinamika Bulanan", "Variasi Boxplot"],
-                    default="Sebaran & Korelasi",
-                    label_visibility="collapsed"
-                )
-            with r_c2:
-                sel_fokus = None
-                if chart_view == "Sebaran & Korelasi":
-                    avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
-                    short_names = {
-                        "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
-                        "Pendawa Subur POC": "Pendawa POC"
-                    }
-                    if len(avail_komod) > 1:
-                        fokus_opts = ["Semua Komoditas"] + [short_names.get(k, k) for k in avail_komod]
+            # Header & Mode Switcher (Full-width clean layout)
+            st.markdown('<div style="font-size:1.05rem; font-weight:700; color:#1a1a1a; margin-bottom:6px;">Evaluasi Harga vs Volume Pesanan</div>', unsafe_allow_html=True)
+            chart_view = st.pills(
+                "Mode Tampilan",
+                options=["Sebaran & Korelasi", "Dinamika Bulanan", "Variasi Boxplot"],
+                default="Sebaran & Korelasi",
+                label_visibility="collapsed"
+            )
+            sel_fokus = None
+            if chart_view == "Sebaran & Korelasi":
+                avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
+                short_names = {
+                    "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
+                    "Pendawa Subur POC": "Pendawa POC"
+                }
+                if len(avail_komod) > 1:
+                    fokus_opts = ["Semua Komoditas"] + [short_names.get(k, k) for k in avail_komod]
+                    fc1, fc2 = st.columns([1, 1.8])
+                    with fc1:
+                        st.markdown('<div style="font-size:0.85rem; font-weight:700; color:#333; padding-top:6px;">Fokus Analisis SKU:</div>', unsafe_allow_html=True)
+                    with fc2:
                         sel_fokus_label = st.selectbox(
                             "Fokus Komoditas:",
                             options=fokus_opts,
                             index=0,
                             label_visibility="collapsed"
                         )
-                        inv_map = {v: k for k, v in short_names.items()}
-                        sel_fokus = inv_map.get(sel_fokus_label, sel_fokus_label)
-                    elif len(avail_komod) == 1:
-                        sel_fokus = avail_komod[0]
+                    inv_map = {v: k for k, v in short_names.items()}
+                    sel_fokus = inv_map.get(sel_fokus_label, sel_fokus_label)
+                elif len(avail_komod) == 1:
+                    sel_fokus = avail_komod[0]
 
             fig_scatter = generate_cached_scatter_figure(filtered_df, chart_view, sel_fokus)
             if fig_scatter is not None:
