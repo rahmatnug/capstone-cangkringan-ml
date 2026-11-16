@@ -103,10 +103,17 @@ button[kind="headerNoPadding"] span,
     border-radius: 12px !important;
     box-shadow: 3px 3px 0px #1a1a1a !important;
     background: #FFFFFF !important;
+    padding: 3px !important;
 }
 [data-testid="stSidebar"] .stMultiSelect > div > div {
     background: #FFFFFF !important;
     color: #1a1a1a !important;
+}
+[data-testid="stSidebar"] [data-testid="stMultiSelectTagsContainer"] {
+    max-height: none !important;
+    height: auto !important;
+    gap: 4px !important;
+    padding: 2px !important;
 }
 [data-testid="stSidebar"] [data-tag],
 [data-testid="stSidebar"] [data-testid="stMultiSelectTagsContainer"] span,
@@ -117,6 +124,11 @@ button[kind="headerNoPadding"] span,
     border-radius: 6px !important;
     font-weight: 700 !important;
     box-shadow: 2px 2px 0px #1a1a1a !important;
+    height: auto !important;
+    padding: 2px 6px !important;
+    margin: 2px 1px !important;
+    font-size: 0.78rem !important;
+    max-width: 100% !important;
 }
 [data-testid="stSidebar"] [data-tag] span,
 [data-testid="stSidebar"] [data-testid="stMultiSelectTagsContainer"] span span,
@@ -134,6 +146,26 @@ button[kind="headerNoPadding"] span,
     background: #FFFFFF !important;
     border: 3px solid #1a1a1a !important;
     border-radius: 12px !important;
+}
+
+/* --- Sidebar: Radio --- */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+    background: #FFFFFF !important;
+    border: 3px solid #1a1a1a !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    box-shadow: 3px 3px 0px #1a1a1a !important;
+    gap: 6px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+    cursor: pointer !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stWidgetLabel"] p {
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+    font-size: 0.9rem !important;
 }
 
 /* --- Sidebar: Selectbox --- */
@@ -248,11 +280,9 @@ button[kind="headerNoPadding"] span,
     display: none !important;
 }
 
-/* Slider Tick Bar — Show min/max anchor labels for operational context */
+/* Slider Tick Bar — Hide duplicate raw tick numbers to prevent collision with custom helper card */
 [data-testid="stSlider"] [data-testid="stSliderTickBar"] {
-    color: #1a1a1a !important;
-    font-weight: 600 !important;
-    font-size: 0.75rem !important;
+    display: none !important;
 }
 
 /* Responsive Button Spacing & Clearance */
@@ -326,23 +356,33 @@ button[kind="headerNoPadding"] span,
 }
 
 /* ---------- Tabs ---------- */
-.stTabs [data-baseweb="tab-list"] { gap: 8px; }
+.stTabs [data-baseweb="tab-list"] {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+    overflow-x: visible !important;
+    padding-bottom: 4px !important;
+}
 .stTabs [data-baseweb="tab-highlight"],
-.stTabs [data-baseweb="tab-border"] { display: none; }
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
 
 .stTabs button[role="tab"],
 .stTabs [data-baseweb="tab"],
 .stTabs [data-testid="stTab"] {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
     background: #FFD600 !important;
     background-color: #FFD600 !important;
     border: 3px solid #1a1a1a !important;
     border-radius: 12px !important;
-    box-shadow: 4px 4px 0px #1a1a1a;
+    box-shadow: 3px 3px 0px #1a1a1a !important;
     font-weight: 700 !important;
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
-    padding: 10px 20px !important;
-    transition: all 0.15s;
+    padding: 8px 4px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    transition: all 0.15s !important;
 }
 .stTabs button[role="tab"] *,
 .stTabs [data-baseweb="tab"] * {
@@ -355,25 +395,53 @@ button[kind="headerNoPadding"] span,
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
     font-weight: 700 !important;
+    font-size: 0.88rem !important;
     margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 .stTabs button[role="tab"]:hover,
 .stTabs [data-baseweb="tab"]:hover {
     background: #FFD600 !important;
-    transform: translate(-2px,-2px);
-    box-shadow: 6px 6px 0px #1a1a1a;
+    transform: translate(-2px,-2px) !important;
+    box-shadow: 5px 5px 0px #1a1a1a !important;
 }
 .stTabs [aria-selected="true"],
 .stTabs button[aria-selected="true"] {
     background: #7BF1A8 !important;
     background-color: #7BF1A8 !important;
-    transform: translate(2px,2px);
+    transform: translate(2px,2px) !important;
     box-shadow: 2px 2px 0px #1a1a1a !important;
 }
 .stTabs [aria-selected="true"] *,
 .stTabs button[aria-selected="true"] * {
     color: #1a1a1a !important;
     -webkit-text-fill-color: #1a1a1a !important;
+}
+
+/* ---------- Download Button ---------- */
+.stDownloadButton button,
+div[data-testid="stDownloadButton"] button {
+    background-color: #FFD600 !important;
+    color: #1a1a1a !important;
+    border: 3px solid #1a1a1a !important;
+    border-radius: 10px !important;
+    box-shadow: 3px 3px 0px #1a1a1a !important;
+    font-weight: 700 !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    padding: 8px 20px !important;
+    transition: all 0.15s !important;
+}
+.stDownloadButton button:hover,
+div[data-testid="stDownloadButton"] button:hover {
+    background-color: #7BF1A8 !important;
+    transform: translate(-2px, -2px) !important;
+    box-shadow: 5px 5px 0px #1a1a1a !important;
+}
+.stDownloadButton button * {
+    color: #1a1a1a !important;
+    font-weight: 700 !important;
 }
 
 /* ---------- Pills (st.pills) ---------- */
@@ -769,15 +837,15 @@ def format_batch_fisik(komoditas: str, volume: float) -> str:
 def render_operational_stepper(selected_komoditas, jalur_penjualan, simulasi_harga, pred_df, kritis_count):
     """Menampilkan kompas navigasi operasional berdaya kontras tinggi."""
     status_stok_text = f"{kritis_count} SKU Kritis" if kritis_count > 0 else "Semua SKU Aman"
-    status_stok_color = "#FF6B9D" if kritis_count > 0 else "#7BF1A8"
+    status_stok_bg = "#FF6B9D" if kritis_count > 0 else "#7BF1A8"
     
     chan_label = jalur_penjualan if jalur_penjualan else "Belum Dipilih"
     pred_status = "Terkalkulasi (Siap)" if not pred_df.empty else "Perlu Dihitung"
-    pred_color = "#7BF1A8" if not pred_df.empty else "#FFD600"
+    pred_bg = "#7BF1A8" if not pred_df.empty else "#FFD600"
 
     st.markdown(f"""
     <div style="background:#FFFFFF; border:3px solid #1a1a1a; border-radius:14px; padding:14px 18px; box-shadow:5px 5px 0px #1a1a1a; margin-bottom:1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1a1a1a; padding-bottom:8px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1a1a1a; padding-bottom:8px; margin-bottom:12px;">
             <div style="font-size:0.85rem; font-weight:700; color:#1a1a1a; letter-spacing:0.5px;">
                 STATUS KENDALI OPERASIONAL PABRIK — CV PANDAWA KENCANA
             </div>
@@ -786,25 +854,33 @@ def render_operational_stepper(selected_komoditas, jalur_penjualan, simulasi_har
             </div>
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
-            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px;">
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; min-height:85px;">
                 <div style="font-size:0.7rem; color:#555; font-weight:700;">LANGKAH 1: PARAMETER</div>
-                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a;">{len(selected_komoditas)} SKU Terpilih</div>
-                <div style="font-size:0.75rem; color:#333;">Kanal: {chan_label}</div>
+                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a; margin:3px 0;">
+                    <span style="background:#FFFFFF; color:#1a1a1a; padding:2px 6px; border:1.5px solid #1a1a1a; border-radius:5px;">{len(selected_komoditas)} SKU Terpilih</span>
+                </div>
+                <div style="font-size:0.75rem; color:#333; font-weight:500;">Kanal: {chan_label}</div>
             </div>
-            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px;">
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; min-height:85px;">
                 <div style="font-size:0.7rem; color:#555; font-weight:700;">LANGKAH 2: GUDANG</div>
-                <div style="font-size:0.95rem; font-weight:700; color:{status_stok_color};">{status_stok_text}</div>
-                <div style="font-size:0.75rem; color:#333;">Evaluasi Batas Minimum</div>
+                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a; margin:3px 0;">
+                    <span style="background:{status_stok_bg}; color:#1a1a1a; padding:2px 6px; border:1.5px solid #1a1a1a; border-radius:5px;">{status_stok_text}</span>
+                </div>
+                <div style="font-size:0.75rem; color:#333; font-weight:500;">Evaluasi Batas Minimum</div>
             </div>
-            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px;">
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; min-height:85px;">
                 <div style="font-size:0.7rem; color:#555; font-weight:700;">LANGKAH 3: SIMULASI</div>
-                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a;">Rp {simulasi_harga:,.0f} / Unit</div>
-                <div style="font-size:0.75rem; color:#333;">Sensitivitas Harga Acuan</div>
+                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a; margin:3px 0;">
+                    <span style="background:#FFD600; color:#1a1a1a; padding:2px 6px; border:1.5px solid #1a1a1a; border-radius:5px;">Rp {simulasi_harga:,.0f} / Unit</span>
+                </div>
+                <div style="font-size:0.75rem; color:#333; font-weight:500;">Sensitivitas Harga Acuan</div>
             </div>
-            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px;">
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; min-height:85px;">
                 <div style="font-size:0.7rem; color:#555; font-weight:700;">LANGKAH 4: SPK DSS</div>
-                <div style="font-size:0.95rem; font-weight:700; color:{pred_color};">{pred_status}</div>
-                <div style="font-size:0.75rem; color:#333;">Batch Drum / Jeriken / Zak</div>
+                <div style="font-size:0.95rem; font-weight:700; color:#1a1a1a; margin:3px 0;">
+                    <span style="background:{pred_bg}; color:#1a1a1a; padding:2px 6px; border:1.5px solid #1a1a1a; border-radius:5px;">{pred_status}</span>
+                </div>
+                <div style="font-size:0.75rem; color:#333; font-weight:500;">Batch Drum / Jeriken / Zak</div>
             </div>
         </div>
     </div>
@@ -939,10 +1015,10 @@ def generate_cached_gauge_figures(selected_komoditas_tuple):
         fig = go.Figure(go.Indicator(
             mode="gauge+number+delta",
             value=d["sisa_hari"],
-            number=dict(suffix=" hari", font=dict(family="Space Grotesk", size=22, color="#1a1a1a")),
-            delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%"),
+            number=dict(suffix=" hari", font=dict(family="Space Grotesk, sans-serif", size=20, color="#1a1a1a")),
+            delta=dict(reference=d["masa_simpan"], relative=True, valueformat=".0%", font=dict(family="Space Grotesk, sans-serif", size=12)),
             gauge=dict(
-                axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a"),
+                axis=dict(range=[0, d["masa_simpan"]], tickcolor="#1a1a1a", tickwidth=2, tickfont=dict(size=10, family="Space Grotesk, sans-serif")),
                 bar=dict(color=g_color, line=dict(color="#1a1a1a", width=2)),
                 bgcolor="#FFFFFF",
                 bordercolor="#1a1a1a", borderwidth=2,
@@ -953,8 +1029,19 @@ def generate_cached_gauge_figures(selected_komoditas_tuple):
                 ],
             ),
         ))
-        nb_layout(fig, f"Sisa Umur Bakteri Aktif — {k}")
-        fig.update_layout(height=270, margin=dict(t=55, b=15, l=25, r=25))
+        fig.update_layout(
+            title=dict(
+                text=f"<b>{k}</b>",
+                font=dict(family="Space Grotesk, sans-serif", size=14, color="#1a1a1a"),
+                x=0.5,
+                xanchor="center",
+            ),
+            font=dict(family="Space Grotesk, sans-serif", color="#1a1a1a"),
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            height=250,
+            margin=dict(t=42, b=15, l=35, r=35)
+        )
         gauge_figs[k] = fig
     return gauge_figs
 
@@ -1035,8 +1122,8 @@ def generate_cached_historical_figures(df_sub):
         marker_line=dict(color="#1a1a1a", width=2.5),
         pull=[0.03, 0.03, 0.03],
     )
-    nb_layout(fig_donut, "Proporsi Permintaan Berdasarkan Musim Tanam")
-    fig_donut.update_layout(height=400)
+    nb_layout(fig_donut, "Proporsi per Musim Tanam")
+    fig_donut.update_layout(height=420, showlegend=False)
 
     return fig_trend, fig_bar, fig_donut
 
@@ -1052,19 +1139,24 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
     if chart_view == "Sebaran & Korelasi":
         avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in df_sub["nama_komoditas"].unique()]
         
-        if sel_fokus == "Bandingkan Semua Komoditas" or (sel_fokus is None and len(avail_komod) > 1):
-            cols_count = len(avail_komod)
+        if sel_fokus in ["Semua Komoditas", "Bandingkan Semua Komoditas", None] and len(avail_komod) > 1:
             short_names = {
                 "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
                 "Pendawa Subur POC": "Pendawa POC"
             }
-            short_avail = [short_names.get(k, k) for k in avail_komod]
+            n_komod = len(avail_komod)
+            n_rows = 2 if n_komod > 3 else 1
+            n_cols = min(3, n_komod)
+            
             fig_sub = make_subplots(
-                rows=1, cols=cols_count,
-                subplot_titles=[f"<b>{k}</b>" for k in short_avail],
-                horizontal_spacing=0.07
+                rows=n_rows, cols=n_cols,
+                subplot_titles=[f"<b>{short_names.get(k, k)}</b>" for k in avail_komod],
+                horizontal_spacing=0.09,
+                vertical_spacing=0.22
             )
-            for idx, k in enumerate(avail_komod, 1):
+            for idx, k in enumerate(avail_komod):
+                r = (idx // n_cols) + 1
+                c = (idx % n_cols) + 1
                 sub_data = df_sub[df_sub["nama_komoditas"] == k]
                 fig_sub.add_trace(
                     go.Scatter(
@@ -1072,7 +1164,7 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
                         y=sub_data["volume_permintaan"],
                         mode="markers",
                         marker=dict(
-                            size=7,
+                            size=6,
                             color=NB_KOMOD.get(k, "#FFD600"),
                             line=dict(width=1.2, color="#1a1a1a"),
                             opacity=0.75
@@ -1087,7 +1179,7 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
                         name=k,
                         showlegend=False
                     ),
-                    row=1, col=idx
+                    row=r, col=c
                 )
                 if len(sub_data) > 1:
                     z = np.polyfit(sub_data["harga_satuan_transaksi"], sub_data["volume_permintaan"], 1)
@@ -1099,31 +1191,35 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
                         go.Scatter(
                             x=x_line, y=p(x_line),
                             mode="lines",
-                            line=dict(color="#1a1a1a", width=2.5, dash="dot"),
+                            line=dict(color="#1a1a1a", width=2, dash="dot"),
                             name=f"Tren {k}",
                             showlegend=False,
                             hoverinfo="skip"
                         ),
-                        row=1, col=idx
+                        row=r, col=c
                     )
                 fig_sub.update_xaxes(
-                    title_text="Harga (Rp)", row=1, col=idx,
-                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
-                    tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
+                    title_text="Harga (Rp)", row=r, col=c,
+                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=1.5,
+                    tickfont=dict(size=9, color="#1a1a1a"), title_font=dict(size=10, color="#1a1a1a")
                 )
                 fig_sub.update_yaxes(
-                    title_text="Volume Pesanan" if idx == 1 else "", row=1, col=idx,
-                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=2,
-                    tickfont=dict(size=10, color="#1a1a1a"), title_font=dict(size=11, color="#1a1a1a")
+                    row=r, col=c,
+                    showgrid=True, gridcolor="#E8E8E8", linecolor="#1a1a1a", linewidth=1.5,
+                    tickfont=dict(size=9, color="#1a1a1a"), title_font=dict(size=10, color="#1a1a1a")
                 )
+            if n_rows > 0:
+                fig_sub.update_yaxes(title_text="Volume", row=1, col=1, title_font=dict(size=10))
+                if n_rows > 1:
+                    fig_sub.update_yaxes(title_text="Volume", row=2, col=1, title_font=dict(size=10))
 
-            fig_sub.update_annotations(font_size=11)
+            fig_sub.update_annotations(font_size=11, font_family="Space Grotesk, sans-serif")
             fig_sub.update_layout(
-                height=400,
+                height=420,
                 plot_bgcolor="#FAFAFA",
                 paper_bgcolor="#FFFFFF",
-                margin=dict(l=40, r=20, t=40, b=45),
-                font=dict(family="Space Grotesk, sans-serif", size=12, color="#1a1a1a"),
+                margin=dict(l=45, r=20, t=35, b=40),
+                font=dict(family="Space Grotesk, sans-serif", size=11, color="#1a1a1a"),
                 hoverlabel=dict(bgcolor="#FFD600", bordercolor="#1a1a1a", font=dict(family="Space Grotesk", color="#1a1a1a"))
             )
             return fig_sub
@@ -1166,7 +1262,7 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
                 )
                 return fig_single
 
-    elif chart_view == "Dinamika Bulanan (Dual-Axis)":
+    elif chart_view in ["Dinamika Bulanan", "Dinamika Bulanan (Dual-Axis)"]:
         monthly = (
             df_sub
             .groupby(pd.Grouper(key="tanggal_permintaan", freq="MS"))
@@ -1206,7 +1302,7 @@ def generate_cached_scatter_figure(df_sub, chart_view, sel_fokus=None):
         )
         return fig_dual
 
-    elif chart_view == "Rentang Variasi (Boxplot)":
+    elif chart_view in ["Variasi Boxplot", "Rentang Variasi (Boxplot)"]:
         avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in df_sub["nama_komoditas"].unique()]
         fig_box = make_subplots(rows=1, cols=2, subplot_titles=["<b>Sebaran Variasi Harga Transaksi (Rp)</b>", "<b>Sebaran Volume Permintaan</b>"], horizontal_spacing=0.1)
         for komod in avail_komod:
@@ -1429,11 +1525,11 @@ render_operational_stepper(selected_komoditas, jalur_penjualan, simulasi_harga, 
 
 # Re-architected 5 tabs matching shopfloor reality
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "1. 🏭 Stok Gudang & Umur Produk",
-    "2. 📋 Perintah Produksi Pabrik",
-    "3. 🔮 Simulasi Permintaan Pasar",
-    "4. 📊 Riwayat Penjualan",
-    "5. 📖 SOP & Dosis Pemakaian",
+    "1. 🏭 Stok & Mutu",
+    "2. 📋 Perintah Pabrik",
+    "3. 🔮 Simulasi Pasar",
+    "4. 📊 Riwayat Jual",
+    "5. 📖 SOP Lapangan",
 ])
 
 # ============================================================
@@ -1551,10 +1647,19 @@ with tab2:
             summary_display,
             use_container_width=True,
             hide_index=True,
+            column_config={
+                "Komoditas": st.column_config.TextColumn("Komoditas", width="medium"),
+                "Unit": st.column_config.TextColumn("Satuan", width="small"),
+                "Jalur Penjualan": st.column_config.TextColumn("Kanal Distribusi", width="medium"),
+                "Prediksi Permintaan": st.column_config.NumberColumn("Prediksi Permintaan", format="%.1f"),
+                "Safety Buffer": st.column_config.NumberColumn("Safety Buffer (15%)", format="%.1f"),
+                "Rekomendasi Produksi": st.column_config.NumberColumn("Rekomendasi Produksi", format="%.1f"),
+                "Alokasi Wadah Pabrik": st.column_config.TextColumn("Alokasi Wadah Fisik Pabrik", width="large"),
+            }
         )
         csv_data = summary_display.to_csv(index=False).encode('utf-8')
         st.download_button(
-            "Unduh Rencana Batch Pabrik (CSV)",
+            "📥 Unduh Rencana Batch Pabrik (CSV)",
             data=csv_data,
             file_name="rencana_batch_pandawa.csv",
             mime="text/csv",
@@ -1573,21 +1678,25 @@ with tab3:
     st.markdown("""
     <div class="neo-card" style="margin-bottom:1.5rem; padding:18px 14px;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="font-weight:700; font-size:.95rem;">1. Parameter Operasional</div>
-                <div style="font-size:.72rem; color:#444;">Harga · Musim · Kanal</div>
+            <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="display:inline-block; background:#1a1a1a; color:#FFD600; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 1</div>
+                <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Parameter Operasional</div>
+                <div style="font-size:.75rem; color:#333; font-weight:500;">Harga · Musim · Kanal</div>
             </div>
-            <div style="background:#FFF8E7; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="font-weight:700; font-size:.95rem;">2. Validasi Data Pabrik</div>
-                <div style="font-size:.72rem; color:#444;">Sinkronisasi Transaksi & BMKG</div>
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="display:inline-block; background:#1a1a1a; color:#FFFFFF; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 2</div>
+                <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Validasi Data Pabrik</div>
+                <div style="font-size:.75rem; color:#333; font-weight:500;">Sinkronisasi Transaksi & BMKG</div>
             </div>
-            <div style="background:#FFF8E7; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="font-weight:700; font-size:.95rem;">3. Estimasi Permintaan</div>
-                <div style="font-size:.72rem; color:#444;">Proyeksi Kebutuhan Lapangan</div>
+            <div style="background:#FAFAFA; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="display:inline-block; background:#1a1a1a; color:#FFFFFF; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 3</div>
+                <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Estimasi Permintaan</div>
+                <div style="font-size:.75rem; color:#333; font-weight:500;">Proyeksi Kebutuhan Lapangan</div>
             </div>
-            <div style="background:#FFD600; border:2px solid #1a1a1a; border-radius:10px; padding:10px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
-                <div style="font-weight:700; font-size:.95rem;">4. Alokasi Batch</div>
-                <div style="font-size:.72rem; color:#444;">Output Drum / Jeriken / Zak</div>
+            <div style="background:#7BF1A8; border:2px solid #1a1a1a; border-radius:10px; padding:12px 14px; box-shadow:3px 3px 0 #1a1a1a; text-align:center;">
+                <div style="display:inline-block; background:#1a1a1a; color:#7BF1A8; border-radius:5px; padding:1px 8px; font-size:.7rem; font-weight:700; margin-bottom:4px;">FASE 4</div>
+                <div style="font-weight:700; font-size:.95rem; color:#1a1a1a;">Alokasi Batch Pabrik</div>
+                <div style="font-size:.75rem; color:#333; font-weight:500;">Output Drum / Jeriken / Zak</div>
             </div>
         </div>
     </div>
@@ -1625,8 +1734,10 @@ with tab3:
         fig.add_trace(go.Bar(
             name="Prediksi Permintaan", x=st.session_state.pred_df["Komoditas"],
             y=st.session_state.pred_df["Prediksi Permintaan"],
-            text=st.session_state.pred_df["Prediksi Permintaan"].map(lambda value: f"{value:.1f}"),
-            textposition="outside",
+            text=st.session_state.pred_df["Prediksi Permintaan"].map(lambda value: f"<b>{value:.1f}</b>"),
+            textposition="inside",
+            insidetextanchor="top",
+            insidetextfont=dict(family="Space Grotesk, sans-serif", size=13, color="#1a1a1a"),
             marker_color=[NB_KOMOD.get(name, "#88D4FF") for name in st.session_state.pred_df["Komoditas"]],
             marker_line_color="#1a1a1a", marker_line_width=2,
             hovertemplate="<b>%{x}</b><br>Estimasi: %{y:.1f}<extra></extra>",
@@ -1641,7 +1752,8 @@ with tab3:
             ),
         ))
         nb_layout(fig, f"Proyeksi Penyerapan Pasar pada Harga Rp {simulasi_harga:,.0f}", y_title="Estimasi Kebutuhan (Satuan Resmi)")
-        fig.update_layout(showlegend=False)
+        fig.update_layout(showlegend=False, height=440)
+        fig.update_xaxes(tickangle=-15, tickfont=dict(family="Space Grotesk, sans-serif", size=11, color="#1a1a1a"))
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         st.caption("Rentang batas atas dan bawah (garis vertikal) menunjukkan batas toleransi fluktuasi pasar (±25 unit). Jika pesanan mendekati batas atas, siapkan kapasitas drum fermentasi cadangan.")
     else:
@@ -1698,38 +1810,43 @@ with tab4:
                 st.plotly_chart(fig_donut, use_container_width=True, config={"displayModeBar": False})
 
         with right2:
-            # Header & Mode Switcher
-            r_head1, r_head2 = st.columns([1, 1])
-            with r_head1:
-                st.markdown('<div style="font-size:1.05rem; font-weight:700; color:#1a1a1a; padding-top:4px;">Evaluasi Harga vs Volume Pesanan</div>', unsafe_allow_html=True)
-            with r_head2:
+            # Header & Mode Switcher (Aligned layout without clipping)
+            st.markdown('<div style="font-size:1.05rem; font-weight:700; color:#1a1a1a; margin-bottom:8px;">Evaluasi Harga vs Volume Pesanan</div>', unsafe_allow_html=True)
+            r_c1, r_c2 = st.columns([1.2, 1.1])
+            with r_c1:
                 chart_view = st.pills(
                     "Mode Tampilan",
-                    options=["Sebaran & Korelasi", "Dinamika Bulanan (Dual-Axis)", "Rentang Variasi (Boxplot)"],
+                    options=["Sebaran & Korelasi", "Dinamika Bulanan", "Variasi Boxplot"],
                     default="Sebaran & Korelasi",
                     label_visibility="collapsed"
                 )
-
-            sel_fokus = None
-            if chart_view == "Sebaran & Korelasi":
-                avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
-                if len(avail_komod) > 1:
-                    fokus_opts = ["Bandingkan Semua Komoditas"] + avail_komod
-                    sel_fokus = st.segmented_control(
-                        "Fokus Komoditas:",
-                        options=fokus_opts,
-                        default="Bandingkan Semua Komoditas",
-                        label_visibility="collapsed"
-                    )
-                elif len(avail_komod) == 1:
-                    sel_fokus = avail_komod[0]
+            with r_c2:
+                sel_fokus = None
+                if chart_view == "Sebaran & Korelasi":
+                    avail_komod = [k for k in ["GB Propunic", "GB Profeed", "GB Proquatic", "Pendawa Subur POC", "Compossap", "Agen Hayati (Trichogem / Methagem)"] if k in filtered_df["nama_komoditas"].unique()]
+                    short_names = {
+                        "Agen Hayati (Trichogem / Methagem)": "Agen Hayati",
+                        "Pendawa Subur POC": "Pendawa POC"
+                    }
+                    if len(avail_komod) > 1:
+                        fokus_opts = ["Semua Komoditas"] + [short_names.get(k, k) for k in avail_komod]
+                        sel_fokus_label = st.selectbox(
+                            "Fokus Komoditas:",
+                            options=fokus_opts,
+                            index=0,
+                            label_visibility="collapsed"
+                        )
+                        inv_map = {v: k for k, v in short_names.items()}
+                        sel_fokus = inv_map.get(sel_fokus_label, sel_fokus_label)
+                    elif len(avail_komod) == 1:
+                        sel_fokus = avail_komod[0]
 
             fig_scatter = generate_cached_scatter_figure(filtered_df, chart_view, sel_fokus)
             if fig_scatter is not None:
                 st.plotly_chart(fig_scatter, use_container_width=True, config={"displayModeBar": False})
 
             # Mini metrics badge for single SKU focus
-            if chart_view == "Sebaran & Korelasi" and sel_fokus and sel_fokus != "Bandingkan Semua Komoditas":
+            if chart_view == "Sebaran & Korelasi" and sel_fokus and sel_fokus not in ["Semua Komoditas", "Bandingkan Semua Komoditas"]:
                 sub_data = filtered_df[filtered_df["nama_komoditas"] == sel_fokus]
                 if not sub_data.empty and len(sub_data) > 1:
                     corr_val = sub_data["harga_satuan_transaksi"].corr(sub_data["volume_permintaan"])
@@ -1749,7 +1866,19 @@ with tab4:
                  "harga_satuan_transaksi", "fase_musim", "curah_hujan_mm"]
             ].copy()
             show.columns = ["Tanggal Pesanan", "Nama Produk", "Jumlah Pesanan", "Harga Satuan Transaksi (Rp)", "Musim Tanam", "Curah Hujan (mm)"]
-            st.dataframe(show.head(20), use_container_width=True, hide_index=True)
+            st.dataframe(
+                show.head(20),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Tanggal Pesanan": st.column_config.DateColumn("Tanggal Pesanan", format="YYYY-MM-DD"),
+                    "Nama Produk": st.column_config.TextColumn("Nama Produk"),
+                    "Jumlah Pesanan": st.column_config.NumberColumn("Jumlah Pesanan", format="%.1f"),
+                    "Harga Satuan Transaksi (Rp)": st.column_config.NumberColumn("Harga Satuan (Rp)", format="Rp %d"),
+                    "Musim Tanam": st.column_config.TextColumn("Musim Tanam"),
+                    "Curah Hujan (mm)": st.column_config.NumberColumn("Curah Hujan (mm)", format="%.1f mm"),
+                }
+            )
     else:
         st.markdown("""
         <div class="neo-card-yellow" style="text-align:center;">
@@ -1788,7 +1917,8 @@ with tab5:
                 accent = sop_colors[row_idx % len(sop_colors)]
                 sop_col.markdown(f"""
                 <div style="border:3px solid #1a1a1a; border-radius:16px; padding:18px 20px; margin-bottom:16px;
-                            box-shadow:4px 4px 0px #1a1a1a; background:#FFFFFF; min-height:200px;">
+                            box-shadow:4px 4px 0px #1a1a1a; background:#FFFFFF; min-height:220px; height:calc(100% - 16px);
+                            display:flex; flex-direction:column; justify-content:flex-start;">
                     <div style="font-weight:800; font-size:1.1rem; color:#1a1a1a; margin-bottom:8px;">{nama_produk}</div>
                     <div style="display:inline-block; background:{accent}; border:2px solid #1a1a1a; border-radius:8px;
                                 padding:3px 12px; font-weight:700; font-size:0.8rem; color:#1a1a1a; margin-bottom:12px;">
